@@ -1,10 +1,31 @@
+# Dependencies
+node_modules/
 
+# Hardhat artifacts
+artifacts/
+cache/
 
-# configuration and secrets
+# ZK artifacts (large files)
+circuits/*.r1cs
+circuits/*.sym
+circuits/*.zkey
+circuits/*.ptau
+circuits/zkDutchAuction_js/
+circuits/zkDutchAuction_cpp/
+circuits/proofs/
+circuits/inputs/
+
+# Environment variables
 .env
 .cursor
 
-# logs
+# IDE files
+.vscode/
+.idea/
 
-# temp files
-/tmp
+# OS files
+.DS_Store
+Thumbs.db
+
+# Deployment artifacts (optional - depends on preference)
+deployments/

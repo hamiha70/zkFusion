@@ -69,7 +69,25 @@ contract MockLimitOrderProtocol is ILimitOrderProtocol {
         // Silence unused parameter warnings
         interaction;
         
-        return fillOrder(order, signature, takingAmount, thresholdAmount, target);
+        // Mock implementation - same logic as fillOrder but with explicit target
+        bytes32 orderHash = hashOrder(order);
+        
+        // Calculate proportional fill
+        uint256 remainingMaking = order.makingAmount - filledAmounts[orderHash];
+        uint256 actualTaking = takingAmount;
+        
+        if (actualTaking > remainingMaking) {
+            actualTaking = remainingMaking;
+        }
+        
+        actualMakingAmount = (actualTaking * order.makingAmount) / order.takingAmount;
+        
+        // Update filled amount
+        filledAmounts[orderHash] += actualTaking;
+        
+        emit OrderFilled(orderHash, order.maker, target, actualMakingAmount, actualTaking);
+        
+        return (actualMakingAmount, actualTaking);
     }
     
     /**

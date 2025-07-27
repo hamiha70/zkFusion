@@ -85,7 +85,12 @@ async function main() {
   // Save to file
   const filename = `deployment-${deploymentInfo.chainId}-${Date.now()}.json`;
   const filepath = path.join(deploymentsDir, filename);
-  fs.writeFileSync(filepath, JSON.stringify(deploymentInfo, null, 2));
+  // Convert BigInt values to strings for JSON serialization
+  const serializableInfo = JSON.parse(JSON.stringify(deploymentInfo, (key, value) =>
+    typeof value === 'bigint' ? value.toString() : value
+  ));
+  
+  fs.writeFileSync(filepath, JSON.stringify(serializableInfo, null, 2));
   console.log(`\n💾 Deployment info saved to: ${filepath}`);
 
   // Display summary

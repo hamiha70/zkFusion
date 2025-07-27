@@ -44,9 +44,19 @@ async function hashBid(price, amount, nonce) {
  * @returns {BigInt} - Random nonce
  */
 function generateNonce() {
-  // Generate a random 32-byte number
-  const randomBytes = require('crypto').randomBytes(32);
-  return BigInt('0x' + randomBytes.toString('hex'));
+  // Generate a random number that fits in the field
+  // Use 31 bytes instead of 32 to ensure it's always < field size
+  const randomBytes = require('crypto').randomBytes(31);
+  const nonce = BigInt('0x' + randomBytes.toString('hex'));
+  
+  // Double-check it fits in field (should always be true with 31 bytes)
+  const fieldSize = BigInt("21888242871839275222246405745257275088548364400416034343698204186575808495617");
+  if (nonce >= fieldSize) {
+    // Fallback: modulo operation (should never be needed with 31 bytes)
+    return nonce % fieldSize;
+  }
+  
+  return nonce;
 }
 
 /**
@@ -69,11 +79,36 @@ function isValidFieldElement(value) {
   return val >= 0n && val < fieldSize;
 }
 
+/**
+ * Convert Ethereum address to field element safely
+ * @param {string} address - Ethereum address (0x...)
+ * @returns {string} - Field element as string
+ */
+function addressToFieldElement(address) {
+  // Remove 0x prefix if present
+  const cleanAddress = address.startsWith('0x') ? address.slice(2) : address;
+  
+  // Convert to BigInt
+  const addressBigInt = BigInt('0x' + cleanAddress);
+  
+  // Ethereum addresses are 160-bit, which should fit in the field
+  // But some edge cases might overflow, so we hash if needed
+  if (isValidFieldElement(addressBigInt)) {
+    return addressBigInt.toString();
+  } else {
+    // If address somehow overflows, hash it to fit in field
+    // This is a fallback that should rarely be needed
+    const fieldSize = BigInt("21888242871839275222246405745257275088548364400416034343698204186575808495617");
+    return (addressBigInt % fieldSize).toString();
+  }
+}
+
 module.exports = {
   initPoseidon,
   poseidonHash,
   hashBid,
   generateNonce,
   formatFieldElement,
-  isValidFieldElement
+  isValidFieldElement,
+  addressToFieldElement
 }; 

@@ -38,15 +38,45 @@ async function main() {
 
   // Step 1: Create a new commitment contract for this auction
   console.log("🔐 Step 1: Creating BidCommitment contract...");
+  
+  // Debug: Check factory state before calling
+  const countBefore = await factory.getCommitmentCount();
+  console.log(`Commitment count before: ${countBefore}`);
+  
   const createTx = await factory.connect(deployer).createCommitmentContract();
+  console.log(`Transaction hash: ${createTx.hash}`);
+  
   const createReceipt = await createTx.wait();
+  console.log(`Transaction status: ${createReceipt.status}`);
+  console.log(`Gas used: ${createReceipt.gasUsed}`);
+  console.log(`Block number: ${createReceipt.blockNumber}`);
+  
+  // Debug: Check factory state after calling
+  const countAfter = await factory.getCommitmentCount();
+  console.log(`Commitment count after: ${countAfter}`);
   const createEvent = createReceipt.logs.find(log => {
     try {
-      return factory.interface.parseLog(log).name === 'CommitmentCreated';
+      const parsed = factory.interface.parseLog(log);
+      return parsed && parsed.name === 'CommitmentCreated';
     } catch {
       return false;
     }
   });
+  
+  if (!createEvent) {
+    console.error("❌ CommitmentCreated event not found in transaction logs");
+    console.log("Available logs:", createReceipt.logs.length);
+    createReceipt.logs.forEach((log, i) => {
+      try {
+        const parsed = factory.interface.parseLog(log);
+        console.log(`  Log ${i}: ${parsed.name}`);
+      } catch (e) {
+        console.log(`  Log ${i}: Unable to parse (${log.topics[0]})`);
+      }
+    });
+    throw new Error("CommitmentCreated event not found");
+  }
+  
   const commitmentAddress = factory.interface.parseLog(createEvent).args.commitmentContract;
   console.log(`✅ BidCommitment created: ${commitmentAddress}\n`);
   

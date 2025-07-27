@@ -13,7 +13,7 @@ module.exports = {
         enabled: true,
         runs: 200,
       },
-      viaIR: true,
+      // viaIR: true, // Temporarily disabled for better error messages
     },
   },
   networks: {

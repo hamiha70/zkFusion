@@ -1,4 +1,4 @@
-const { hashBid, formatFieldElement, isValidFieldElement } = require('./poseidon');
+const { hashBid, formatFieldElement, isValidFieldElement, addressToFieldElement } = require('./poseidon');
 const fs = require('fs');
 const path = require('path');
 
@@ -41,7 +41,7 @@ async function generateCircuitInputs(bids, commitments, makerAsk, commitmentCont
   // Format commitments and other inputs
   const formattedCommitments = commitments.map(c => formatFieldElement(c));
   const formattedMakerAsk = formatFieldElement(makerAsk);
-  const formattedContractAddress = formatFieldElement(BigInt(commitmentContractAddress));
+  const formattedContractAddress = addressToFieldElement(commitmentContractAddress);
 
   // Validate all field elements
   const allInputs = [
@@ -53,9 +53,19 @@ async function generateCircuitInputs(bids, commitments, makerAsk, commitmentCont
     formattedContractAddress
   ];
 
-  for (const input of allInputs) {
+  for (let i = 0; i < allInputs.length; i++) {
+    const input = allInputs[i];
     if (!isValidFieldElement(input)) {
-      throw new Error(`Invalid field element: ${input}`);
+      // Add debugging info to identify which input is problematic
+      let inputType = 'unknown';
+      if (i < bidPrices.length) inputType = `bidPrice[${i}]`;
+      else if (i < bidPrices.length + bidAmounts.length) inputType = `bidAmount[${i - bidPrices.length}]`;
+      else if (i < bidPrices.length + bidAmounts.length + nonces.length) inputType = `nonce[${i - bidPrices.length - bidAmounts.length}]`;
+      else if (i < bidPrices.length + bidAmounts.length + nonces.length + formattedCommitments.length) inputType = `commitment[${i - bidPrices.length - bidAmounts.length - nonces.length}]`;
+      else if (i === allInputs.length - 2) inputType = 'makerAsk';
+      else if (i === allInputs.length - 1) inputType = 'contractAddress';
+      
+      throw new Error(`Invalid field element for ${inputType}: ${input}`);
     }
   }
 
@@ -135,7 +145,7 @@ function generateExpectedOutputs(auctionResults, commitments, makerAsk, commitme
     formatFieldElement(auctionResults.totalFill),                      // [4] totalFill
     formatFieldElement(auctionResults.weightedAvgPrice),               // [5] weightedAvgPrice  
     formatFieldElement(makerAsk),                                      // [6] makerAsk
-    formatFieldElement(BigInt(commitmentContractAddress))              // [7] contract address
+    addressToFieldElement(commitmentContractAddress)                   // [7] contract address
   ];
 }
 

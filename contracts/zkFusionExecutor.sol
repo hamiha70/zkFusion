@@ -65,7 +65,7 @@ contract zkFusionExecutor {
      * @param orderSignature The maker's signature for the order
      */
     function executeWithProof(
-        uint[8] calldata proof, // [pA[0], pA[1], pB[0][0], pB[0][1], pB[1][0], pB[1][1], pC[0], pC[1]]
+        uint[8] calldata proof,
         uint[8] calldata publicInputs,
         address[] calldata winners,
         address commitmentContractAddress,
@@ -73,69 +73,64 @@ contract zkFusionExecutor {
         bytes calldata orderSignature
     ) external {
         // 1. Verify the ZK proof
+        _verifyProof(proof, publicInputs);
+        
+        // 2. Verify commitment contract and winners
+        _verifyCommitments(publicInputs, winners, commitmentContractAddress);
+        
+        // 3. Execute the fill on 1inch LOP
+        _executeFill(publicInputs, commitmentContractAddress, winners, order, orderSignature);
+    }
+    
+    function _verifyProof(uint[8] calldata proof, uint[8] calldata publicInputs) internal {
         uint[2] memory pA = [proof[0], proof[1]];
         uint[2][2] memory pB = [[proof[2], proof[3]], [proof[4], proof[5]]];
         uint[2] memory pC = [proof[6], proof[7]];
         
-        require(
-            verifier.verifyProof(pA, pB, pC, publicInputs),
-            "Invalid ZK proof"
-        );
+        require(verifier.verifyProof(pA, pB, pC, publicInputs), "Invalid ZK proof");
+    }
+    
+    function _verifyCommitments(
+        uint[8] calldata publicInputs,
+        address[] calldata winners,
+        address commitmentContractAddress
+    ) internal {
+        require(factory.isValidCommitmentContract(commitmentContractAddress), "Invalid commitment contract");
+        require(uint160(commitmentContractAddress) == publicInputs[7], "Commitment contract address mismatch");
         
-        // 2. Verify the commitment contract was created by our trusted factory
-        require(
-            factory.isValidCommitmentContract(commitmentContractAddress),
-            "Invalid commitment contract"
-        );
-        
-        // 3. Verify the commitment contract address matches the one in public inputs
-        // Assuming the contract address is encoded as the last public input
-        require(
-            uint160(commitmentContractAddress) == publicInputs[7],
-            "Commitment contract address mismatch"
-        );
-        
-        // 4. Verify that each winner's commitment matches what's stored on-chain
         BidCommitment commitmentContract = BidCommitment(commitmentContractAddress);
         
-        for (uint256 i = 0; i < winners.length && i < 4; i++) { // Max 4 winners for N=4 circuit
+        for (uint256 i = 0; i < winners.length && i < 4; i++) {
             if (winners[i] != address(0)) {
                 bytes32 expectedCommitment = commitmentContract.getCommitment(winners[i]);
                 require(expectedCommitment != bytes32(0), "Winner has no commitment");
-                require(
-                    expectedCommitment == bytes32(publicInputs[i]),
-                    "Commitment mismatch for winner"
-                );
+                require(expectedCommitment == bytes32(publicInputs[i]), "Commitment mismatch for winner");
             }
         }
-        
-        // 5. Extract auction results from public inputs
-        uint256 totalFill = publicInputs[4]; // Assuming totalFill is at index 4
-        uint256 weightedAvgPrice = publicInputs[5]; // Assuming weightedAvgPrice is at index 5
+    }
+    
+    function _executeFill(
+        uint[8] calldata publicInputs,
+        address commitmentContractAddress,
+        address[] calldata winners,
+        ILimitOrderProtocol.Order calldata order,
+        bytes calldata orderSignature
+    ) internal {
+        uint256 totalFill = publicInputs[4];
+        uint256 weightedAvgPrice = publicInputs[5];
         
         emit ProofVerified(commitmentContractAddress, totalFill, weightedAvgPrice);
         
-        // 6. Execute the fill on 1inch LOP
         require(totalFill > 0, "No fill amount");
         require(totalFill <= order.makingAmount, "Fill exceeds order amount");
         
-        // Call LOP to fill the order
-        (uint256 actualMaking, uint256 actualTaking) = lop.fillOrder(
-            order,
-            orderSignature,
-            totalFill,
-            0, // No minimum threshold for this demo
-            order.receiver != address(0) ? order.receiver : order.maker
-        );
+        address receiver = order.receiver != address(0) ? order.receiver : order.maker;
+        
+        (, uint256 actualTaking) = lop.fillOrder(order, orderSignature, totalFill, 0, receiver);
         
         require(actualTaking > 0, "Fill failed");
         
-        emit AuctionExecuted(
-            commitmentContractAddress,
-            winners,
-            actualTaking,
-            weightedAvgPrice
-        );
+        emit AuctionExecuted(commitmentContractAddress, winners, actualTaking, weightedAvgPrice);
     }
     
     /**

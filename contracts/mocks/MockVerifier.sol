@@ -24,11 +24,15 @@ contract MockVerifier {
         uint[2][2] memory _pB,
         uint[2] memory _pC,
         uint[8] memory _pubSignals
-    ) public returns (bool) {
-        // In a real verifier, this would verify the Groth16 proof
-        // For testing, we just emit an event and return true
+    ) external view returns (bool) {
+        // Silence unused parameter warnings
+        _pA;
+        _pB;
+        _pC;
+        _pubSignals;
         
-        emit ProofVerified(alwaysReturn);
+        // In a real verifier, this would verify the Groth16 proof
+        // For testing, we just return the configured value
         return alwaysReturn;
     }
     

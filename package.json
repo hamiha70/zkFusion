@@ -16,6 +16,7 @@
     "circuit:clean": "node scripts/zk/clean-artifacts.js",
     "zk:full-setup": "npm run circuit:compile && npm run circuit:setup",
     "example": "hardhat run scripts/example-auction.js",
+    "example:combined": "hardhat run scripts/deploy-and-example.js",
     "example:with-zk": "npm run circuit:prove && hardhat run scripts/example-auction-zk.js",
     "full-demo": "npm run deploy && npm run zk:full-setup && npm run example:with-zk",
     "test:integration": "hardhat test test/integration/",

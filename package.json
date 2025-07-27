@@ -1,0 +1,63 @@
+{
+  "name": "zkfusion",
+  "version": "1.0.0",
+  "description": "ZK-powered Dutch auctions for fast, private, provable intent settlement",
+  "main": "index.js",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "deploy": "hardhat run scripts/deploy.js",
+    "deploy:polygon": "hardhat run scripts/deploy.js --network polygon",
+    "deploy:arbitrum": "hardhat run scripts/deploy.js --network arbitrum",
+    "circuit:compile": "cd circuits && circom zkDutchAuction.circom --r1cs --wasm --sym",
+    "circuit:setup": "cd circuits && snarkjs groth16 setup zkDutchAuction.r1cs pot12_final.ptau circuit_final.zkey",
+    "circuit:verify": "cd circuits && snarkjs groth16 verify verification_key.json public.json proof.json",
+    "example": "hardhat run scripts/example-auction.js",
+    "lint": "solhint 'contracts/**/*.sol'",
+    "format": "prettier --write 'contracts/**/*.sol' 'scripts/**/*.js' 'test/**/*.js'"
+  },
+  "keywords": [
+    "zk",
+    "zero-knowledge",
+    "auction",
+    "dutch-auction",
+    "defi",
+    "1inch",
+    "fusion",
+    "circom",
+    "groth16",
+    "blockchain",
+    "ethereum"
+  ],
+  "author": "zkFusion Team",
+  "license": "MIT",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+    "@nomicfoundation/hardhat-verify": "^2.0.0",
+    "hardhat": "^2.19.0",
+    "hardhat-gas-reporter": "^1.0.9",
+    "solidity-coverage": "^0.8.5",
+    "solhint": "^4.0.0",
+    "prettier": "^3.0.0",
+    "prettier-plugin-solidity": "^1.2.0"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.0.0",
+    "circomlib": "^2.0.5",
+    "snarkjs": "^0.7.0",
+    "ffjavascript": "^0.2.60",
+    "ethers": "^6.8.0",
+    "dotenv": "^16.3.1"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zkfusion/zkfusion.git"
+  },
+  "bugs": {
+    "url": "https://github.com/zkfusion/zkfusion/issues"
+  },
+  "homepage": "https://github.com/zkfusion/zkfusion#readme"
+} 

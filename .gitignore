@@ -1,0 +1,10 @@
+
+
+# configuration and secrets
+.env
+.cursor
+
+# logs
+
+# temp files
+/tmp

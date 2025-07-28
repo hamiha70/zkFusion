@@ -29,3 +29,6 @@ Thumbs.db
 
 # Deployment artifacts (optional - depends on preference)
 deployments/
+
+# External Documentation
+docs_external/

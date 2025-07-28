@@ -22,7 +22,16 @@
     "test:integration": "hardhat test test/integration/",
     "test:zk": "hardhat test test/integration/zk-proof.test.js",
     "lint": "solhint 'contracts/**/*.sol'",
-    "format": "prettier --write 'contracts/**/*.sol' 'scripts/**/*.js' 'test/**/*.js'"
+    "format": "prettier --write 'contracts/**/*.sol' 'scripts/**/*.js' 'test/**/*.js'",
+    "external-docs:setup": "chmod +x scripts/external_docs_creation/setup-all-docs.sh && ./scripts/external_docs_creation/setup-all-docs.sh",
+    "external-docs:update": "cd docs_external && find . -name '.git' -type d -execdir git pull \\;",
+    "external-docs:clean": "rm -rf docs_external",
+    "external-docs:high-priority": "chmod +x scripts/external_docs_creation/clone-high-priority-docs.sh && ./scripts/external_docs_creation/clone-high-priority-docs.sh",
+    "external-docs:download-convert": "chmod +x scripts/external_docs_creation/download-and-convert-docs.sh && ./scripts/external_docs_creation/download-and-convert-docs.sh",
+    "external-docs:validate": "chmod +x scripts/external_docs_creation/validate-docs-quality.sh && ./scripts/external_docs_creation/validate-docs-quality.sh",
+    "external-docs:complete": "npm run external-docs:setup && npm run external-docs:download-convert && npm run external-docs:validate",
+    "external-docs:cleanup": "chmod +x scripts/external_docs_creation/cleanup-docs.sh && ./scripts/external_docs_creation/cleanup-docs.sh",
+    "cursor:rules": "chmod +x scripts/external_docs_creation/generate-cursor-rules.sh && ./scripts/external_docs_creation/generate-cursor-rules.sh"
   },
   "keywords": [
     "zk",

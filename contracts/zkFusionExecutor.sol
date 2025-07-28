@@ -11,7 +11,7 @@ interface IVerifier {
         uint[2] memory _pA,
         uint[2][2] memory _pB,
         uint[2] memory _pC,
-        uint[8] memory _pubSignals
+        uint[6] memory _pubSignals
     ) external view returns (bool);
 }
 
@@ -73,7 +73,7 @@ contract zkFusionExecutor {
      */
     function executeWithProof(
         uint[8] calldata proof,
-        uint[8] calldata publicInputs,
+        uint[6] calldata publicInputs,
         address[] calldata winners,
         address commitmentContractAddress,
         ILimitOrderProtocol.Order calldata order,
@@ -89,7 +89,7 @@ contract zkFusionExecutor {
         _executeFill(publicInputs, commitmentContractAddress, winners, order, orderSignature);
     }
     
-    function _verifyProof(uint[8] calldata proof, uint[8] calldata publicInputs) internal {
+    function _verifyProof(uint[8] calldata proof, uint[6] calldata publicInputs) internal {
         uint[2] memory pA = [proof[0], proof[1]];
         uint[2][2] memory pB = [[proof[2], proof[3]], [proof[4], proof[5]]];
         uint[2] memory pC = [proof[6], proof[7]];
@@ -98,12 +98,12 @@ contract zkFusionExecutor {
     }
     
     function _verifyCommitments(
-        uint[8] calldata publicInputs,
+        uint[6] calldata publicInputs,
         address[] calldata winners,
         address commitmentContractAddress
     ) internal {
         require(factory.isValidCommitmentContract(commitmentContractAddress), "Invalid commitment contract");
-        require(uint160(commitmentContractAddress) == publicInputs[7], "Commitment contract address mismatch");
+        require(uint160(commitmentContractAddress) == publicInputs[5], "Commitment contract address mismatch");
         
         BidCommitment commitmentContract = BidCommitment(commitmentContractAddress);
         

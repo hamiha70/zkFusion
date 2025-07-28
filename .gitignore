@@ -19,6 +19,9 @@ circuits/zkDutchAuction_cpp/
 circuits/proofs/
 circuits/inputs/
 
+# Powers of Tau files (regenerate with scripts/zk/setup-ptau.sh)
+*.ptau
+
 # Environment variables
 .env
 .cursor

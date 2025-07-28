@@ -252,6 +252,31 @@ For N bidders:
 - **Verification Time**: ~5ms (constant)
 - **Proof Size**: ~200 bytes (constant)
 
+#### **📊 TODO: Extend to 8 or 16 Inputs - Performance Impact Analysis**
+**Current Circuit (N=4):**
+- **Non-linear constraints**: 1,804
+- **Linear constraints**: 1,615
+- **Witness generation**: 12ms
+- **Memory usage**: ~3MB
+
+**Projected Scaling (O(N²) complexity):**
+- **N=8**: ~7,216 non-linear constraints (4x increase)
+  - Estimated proving time: 8-20 seconds
+  - Memory usage: ~12MB
+  - Witness generation: ~48ms
+
+- **N=16**: ~28,864 non-linear constraints (16x increase)
+  - Estimated proving time: 32-80 seconds
+  - Memory usage: ~48MB
+  - Witness generation: ~192ms
+
+**Trade-offs for Hackathon:**
+- **N=4**: Optimal for demo (fast, reliable, manageable)
+- **N=8**: Good balance (reasonable performance, more realistic)
+- **N=16**: Production-ready but slower proving (may impact demo flow)
+
+**Recommendation**: Start with N=4 for hackathon demo, extend to N=8 for production deployment
+
 ---
 
 ## 🧪 **TESTING STRATEGY**
@@ -348,6 +373,14 @@ it('should verify correct sorting with identity permutation', async () => {
   await circuit.expectPass(input, expectedOutput);
 });
 ```
+
+#### **📋 TODO: Complete Test Suite for All Conditions**
+**Additional test cases needed for comprehensive coverage:**
+- **Boundary Conditions**: Maximum maker ask, minimum bids, edge case amounts
+- **Security Tests**: Replay attacks, commitment tampering, permutation manipulation
+- **Performance Tests**: Large amounts, high prices, complex permutations
+- **Integration Tests**: Contract interaction patterns, gas optimization scenarios
+- **Stress Tests**: Multiple auction rounds, concurrent execution patterns
 
 #### **2. Sorting Verification Tests** ✅ **PASSING**
 ```typescript

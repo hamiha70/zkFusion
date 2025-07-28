@@ -1,7 +1,7 @@
 pragma circom 2.0.0;
 
-include "poseidon.circom";
-include "comparators.circom";
+include "../node_modules/circomlib/circuits/poseidon.circom";
+include "../node_modules/circomlib/circuits/comparators.circom";
 
 // Subcircuit to verify that a permutation represents a correctly sorted order
 // This is much more efficient than implementing sorting in ZK
@@ -152,5 +152,5 @@ template zkDutchAuction(N) {
     addressBinding <== addressHash * totalFill; // Binds address to auction result
 }
 
-// Export the main component
-component main = zkDutchAuction(4); // Support up to 4 bidders for demo 
+// Template exported for use by test wrapper
+// Main component is instantiated in circuits/test/zkDutchAuction.circom 

@@ -1,6 +1,6 @@
 {
   "zkDutchAuction": {
-    "file": "zkDutchAuction",
+    "file": "circuits/zkDutchAuction",
     "template": "zkDutchAuction",
     "params": [4],
     "pubs": [

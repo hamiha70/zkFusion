@@ -35,9 +35,9 @@ describe("zkFusion", function () {
     // Deploy zkFusionExecutor
     const zkFusionExecutor = await ethers.getContractFactory("zkFusionExecutor");
     executor = await zkFusionExecutor.deploy(
+      await mockLOP.getAddress(),
       await mockVerifier.getAddress(),
-      await factory.getAddress(),
-      await mockLOP.getAddress()
+      await factory.getAddress()
     );
     await executor.waitForDeployment();
 
@@ -138,18 +138,16 @@ describe("zkFusion", function () {
     let bids, commitments, mockProof, publicInputs, winnerAddresses;
 
     beforeEach(async function () {
-      // Setup mock order
+      // Setup mock order with new 1inch LOP v4 format
       mockOrder = {
         salt: 123456789n,
-        makerAsset: "0x1234567890123456789012345678901234567890",
-        takerAsset: "0x0987654321098765432109876543210987654321",
         maker: maker.address,
         receiver: maker.address,
-        allowedSender: ethers.ZeroAddress,
+        makerAsset: "0x1234567890123456789012345678901234567890",
+        takerAsset: "0x0987654321098765432109876543210987654321",
         makingAmount: 1000n,
         takingAmount: 400n,
-        offsets: 0n,
-        interactions: "0x"
+        makerTraits: 0n // No special traits for testing
       };
       mockSignature = "0x1234";
 
@@ -270,7 +268,7 @@ describe("zkFusion", function () {
 
     it("Should reject fills exceeding order amount", async function () {
       const excessiveFillInputs = [...publicInputs];
-      excessiveFillInputs[4] = 500n; // totalFill > order.makingAmount
+      excessiveFillInputs[4] = 1500n; // totalFill > order.makingAmount (1000n)
       
       await expect(executor.executeWithProof(
         mockProof,
@@ -300,51 +298,48 @@ describe("zkFusion", function () {
     it("Should fill orders correctly", async function () {
       const order = {
         salt: 123456789n,
-        makerAsset: "0x1234567890123456789012345678901234567890",
-        takerAsset: "0x0987654321098765432109876543210987654321",
         maker: maker.address,
         receiver: maker.address,
-        allowedSender: ethers.ZeroAddress,
+        makerAsset: "0x1234567890123456789012345678901234567890",
+        takerAsset: "0x0987654321098765432109876543210987654321",
         makingAmount: 1000n,
         takingAmount: 400n,
-        offsets: 0n,
-        interactions: "0x"
+        makerTraits: 0n // No special traits for this test
       };
 
-      const [actualMaking, actualTaking] = await mockLOP.fillOrder.staticCall(
+      // Use the new fillContractOrder method with proper signature
+      const [makingAmount, takingAmount, orderHash] = await mockLOP.fillContractOrder.staticCall(
         order,
-        "0x1234",
-        200n, // Taking 200 out of 400
-        0n,
-        ethers.ZeroAddress
+        "0x1234", // signature
+        200n, // amount
+        0n // takerTraits
       );
 
-      expect(actualTaking).to.equal(200n);
-      expect(actualMaking).to.equal(500n); // Proportional: (1000 * 200) / 400
+      expect(takingAmount).to.equal(200n);
+      expect(makingAmount).to.equal(500n); // Proportional: (1000 * 200) / 400
     });
 
     it("Should track filled amounts", async function () {
       const order = {
         salt: 123456789n,
-        makerAsset: "0x1234567890123456789012345678901234567890",
-        takerAsset: "0x0987654321098765432109876543210987654321",
         maker: maker.address,
         receiver: maker.address,
-        allowedSender: ethers.ZeroAddress,
+        makerAsset: "0x1234567890123456789012345678901234567890",
+        takerAsset: "0x0987654321098765432109876543210987654321",
         makingAmount: 1000n,
         takingAmount: 400n,
-        offsets: 0n,
-        interactions: "0x"
+        makerTraits: 0n // No special traits for this test
       };
 
-      await mockLOP.fillOrder(order, "0x1234", 200n, 0n, ethers.ZeroAddress);
+      await mockLOP.fillContractOrder(order, "0x1234", 200n, 0n);
       
-      expect(await mockLOP.getFilledAmount(order)).to.equal(200n);
+      const orderHash = await mockLOP.hashOrder(order);
+      expect(await mockLOP.getFilledAmount(orderHash)).to.equal(200n);
       expect(await mockLOP.isOrderFilled(order)).to.be.false;
       
-      await mockLOP.fillOrder(order, "0x1234", 200n, 0n, ethers.ZeroAddress);
+      await mockLOP.fillContractOrder(order, "0x1234", 200n, 0n);
       
-      expect(await mockLOP.getFilledAmount(order)).to.equal(400n);
+      expect(await mockLOP.getFilledAmount(orderHash)).to.equal(400n);
       expect(await mockLOP.isOrderFilled(order)).to.be.true;
     });
   });
@@ -369,15 +364,13 @@ describe("zkFusion", function () {
       // Step 2: Create order
       const order = {
         salt: 123456789n,
-        makerAsset: "0x1234567890123456789012345678901234567890",
-        takerAsset: "0x0987654321098765432109876543210987654321",
         maker: maker.address,
         receiver: maker.address,
-        allowedSender: ethers.ZeroAddress,
+        makerAsset: "0x1234567890123456789012345678901234567890",
+        takerAsset: "0x0987654321098765432109876543210987654321",
         makingAmount: 1000n,
         takingAmount: 300n, // Can fill 300 tokens
-        offsets: 0n,
-        interactions: "0x"
+        makerTraits: 0n // No special traits for this test
       };
 
       // Step 3: Simulate auction (select top 2 bids: 100 + 150 = 250)
@@ -438,7 +431,8 @@ describe("zkFusion", function () {
       expect(lopEvent).to.not.be.undefined;
 
       // Verify order was filled in LOP
-      expect(await mockLOP.getFilledAmount(order)).to.equal(totalFill);
+      const orderHash = await mockLOP.hashOrder(order);
+      expect(await mockLOP.getFilledAmount(orderHash)).to.equal(totalFill);
     });
   });
 }); 

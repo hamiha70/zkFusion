@@ -5,136 +5,129 @@ import "../interfaces/ILimitOrderProtocol.sol";
 
 /**
  * @title MockLimitOrderProtocol
- * @dev Mock implementation of 1inch Limit Order Protocol for testing
- * @notice This simulates the basic fillOrder functionality
+ * @dev Mock implementation of 1inch Limit Order Protocol v4 for testing
+ * @notice Updated to match real LOP v4 contract: 0x111111125421ca6dc452d289314280a0f8842a65
  */
 contract MockLimitOrderProtocol is ILimitOrderProtocol {
     mapping(bytes32 => uint256) public filledAmounts;
     
-    event OrderFilled(
-        bytes32 indexed orderHash,
-        address indexed maker,
-        address indexed taker,
-        uint256 makingAmount,
-        uint256 takingAmount
-    );
+    // Helper functions to work with Address type (which is uint256 in 1inch)
+    function _addressFromUint(Address addr) internal pure returns (address) {
+        return address(uint160(Address.unwrap(addr)));
+    }
+    
+    function _addressToUint(address addr) internal pure returns (Address) {
+        return Address.wrap(uint256(uint160(addr)));
+    }
     
     /**
-     * @dev Mock fillOrder implementation
+     * @dev Mock fillOrder implementation matching LOP v4 signature
      */
     function fillOrder(
         Order calldata order,
-        bytes calldata signature,
-        uint256 takingAmount,
-        uint256 thresholdAmount,
-        address target
-    ) external override returns (uint256 actualMakingAmount, uint256 actualTakingAmount) {
-        // Silence unused parameter warnings
-        signature;
-        thresholdAmount;
+        bytes32 r,
+        bytes32 vs,
+        uint256 amount,
+        TakerTraits takerTraits
+    ) external payable override returns (uint256 makingAmount, uint256 takingAmount, bytes32 orderHash) {
+        // Silence unused parameter warnings for mock
+        r; vs; takerTraits;
         
-        bytes32 orderHash = hashOrder(order);
+        orderHash = hashOrder(order);
+        address maker = _addressFromUint(order.maker);
+        address makerAsset = _addressFromUint(order.makerAsset);
+        address takerAsset = _addressFromUint(order.takerAsset);
         
         // Simple validation
-        require(takingAmount > 0, "Taking amount must be positive");
-        require(takingAmount <= order.takingAmount, "Taking amount exceeds order");
-        require(filledAmounts[orderHash] + takingAmount <= order.takingAmount, "Order overfilled");
+        require(amount > 0, "Taking amount must be positive");
+        require(amount <= order.takingAmount, "Taking amount exceeds order");
+        require(filledAmounts[orderHash] + amount <= order.takingAmount, "Order overfilled");
         
         // Calculate proportional making amount
-        actualTakingAmount = takingAmount;
-        actualMakingAmount = (order.makingAmount * takingAmount) / order.takingAmount;
+        takingAmount = amount;
+        makingAmount = (order.makingAmount * amount) / order.takingAmount;
         
         // Update filled amount
-        filledAmounts[orderHash] += actualTakingAmount;
+        filledAmounts[orderHash] += takingAmount;
         
-        // Use target address or fallback to maker
-        address receiver = target != address(0) ? target : order.maker;
+        // Calculate remaining amount for event
+        uint256 remainingAmount = order.makingAmount - filledAmounts[orderHash];
         
-        emit OrderFilled(orderHash, order.maker, msg.sender, actualMakingAmount, actualTakingAmount);
+        emit OrderFilled(orderHash, remainingAmount);
         
-        return (actualMakingAmount, actualTakingAmount);
+        return (makingAmount, takingAmount, orderHash);
     }
     
     /**
-     * @dev Mock fillOrderTo implementation
+     * @dev Mock fillContractOrder implementation
      */
-    function fillOrderTo(
+    function fillContractOrder(
         Order calldata order,
         bytes calldata signature,
-        uint256 takingAmount,
-        uint256 thresholdAmount,
-        address target,
-        bytes calldata interaction
-    ) external override returns (uint256 actualMakingAmount, uint256 actualTakingAmount) {
-        // Silence unused parameter warnings
-        interaction;
+        uint256 amount,
+        TakerTraits takerTraits
+    ) external override returns (uint256 makingAmount, uint256 takingAmount, bytes32 orderHash) {
+        // Silence unused parameter warnings for mock
+        signature; takerTraits;
         
-        // Mock implementation - same logic as fillOrder but with explicit target
-        bytes32 orderHash = hashOrder(order);
+        orderHash = hashOrder(order);
+        address maker = _addressFromUint(order.maker);
         
         // Calculate proportional fill
-        uint256 remainingMaking = order.makingAmount - filledAmounts[orderHash];
-        uint256 actualTaking = takingAmount;
-        
-        if (actualTaking > remainingMaking) {
-            actualTaking = remainingMaking;
-        }
-        
-        actualMakingAmount = (actualTaking * order.makingAmount) / order.takingAmount;
+        uint256 remainingTaking = order.takingAmount - filledAmounts[orderHash];
+        takingAmount = amount > remainingTaking ? remainingTaking : amount;
+        makingAmount = (takingAmount * order.makingAmount) / order.takingAmount;
         
         // Update filled amount
-        filledAmounts[orderHash] += actualTaking;
+        filledAmounts[orderHash] += takingAmount;
         
-        emit OrderFilled(orderHash, order.maker, target, actualMakingAmount, actualTaking);
+        // Calculate remaining amount for event
+        uint256 remainingAmount = order.makingAmount - filledAmounts[orderHash];
         
-        return (actualMakingAmount, actualTaking);
+        emit OrderFilled(orderHash, remainingAmount);
+        
+        return (makingAmount, takingAmount, orderHash);
     }
     
     /**
-     * @dev Simple order hash implementation
+     * @dev Order hash implementation matching LOP v4
      */
     function hashOrder(Order calldata order) public pure override returns (bytes32) {
         return keccak256(abi.encode(
             order.salt,
-            order.makerAsset,
-            order.takerAsset,
             order.maker,
             order.receiver,
-            order.allowedSender,
+            order.makerAsset,
+            order.takerAsset,
             order.makingAmount,
             order.takingAmount,
-            order.offsets,
-            keccak256(order.interactions)
+            order.makerTraits
         ));
     }
     
     /**
-     * @dev Mock predicate check - always returns true for testing
+     * @dev Mock cancelOrder implementation
      */
-    function checkPredicate(
-        Order calldata order,
-        bytes calldata signature,
-        uint256 takingAmount
-    ) external pure override returns (bool) {
-        // Silence unused parameter warnings
-        order;
-        signature;
-        takingAmount;
+    function cancelOrder(MakerTraits makerTraits, bytes32 orderHash) external override {
+        // Silence unused parameter warning for mock
+        makerTraits;
         
-        return true;
+        // Mark order as fully filled (simple cancellation)
+        filledAmounts[orderHash] = type(uint256).max;
     }
     
     /**
-     * @dev Get filled amount for an order
+     * @dev Helper function to get filled amount for an order
      */
-    function getFilledAmount(Order calldata order) external view returns (uint256) {
-        return filledAmounts[hashOrder(order)];
+    function getFilledAmount(bytes32 orderHash) external view returns (uint256) {
+        return filledAmounts[orderHash];
     }
     
     /**
-     * @dev Check if order is completely filled
+     * @dev Helper function to check if order is fully filled
      */
     function isOrderFilled(Order calldata order) external view returns (bool) {
-        return filledAmounts[hashOrder(order)] >= order.takingAmount;
+        bytes32 orderHash = hashOrder(order);
+        return filledAmounts[orderHash] >= order.takingAmount;
     }
 } 

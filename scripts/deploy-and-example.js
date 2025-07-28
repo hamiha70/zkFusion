@@ -42,7 +42,7 @@ async function main() {
 
   console.log("\n⚡ Deploying zkFusionExecutor...");
   const zkFusionExecutor = await ethers.getContractFactory("zkFusionExecutor");
-  const executor = await zkFusionExecutor.deploy(verifierAddress, factoryAddress, lopAddress);
+  const executor = await zkFusionExecutor.deploy(lopAddress, verifierAddress, factoryAddress);
   await executor.waitForDeployment();
   const executorAddress = await executor.getAddress();
   console.log("zkFusionExecutor deployed to:", executorAddress);
@@ -97,15 +97,13 @@ async function main() {
   console.log("\n📋 Step 3: Creating maker order...");
   const order = {
     salt: 123456789n,
-    makerAsset: "0x1234567890123456789012345678901234567890",
-    takerAsset: "0x0987654321098765432109876543210987654321",
     maker: maker.address,
     receiver: maker.address,
-    allowedSender: ethers.ZeroAddress,
+    makerAsset: "0x1234567890123456789012345678901234567890",
+    takerAsset: "0x0987654321098765432109876543210987654321",
     makingAmount: 1000n,
     takingAmount: 400n, // This is what the maker wants to receive
-    offsets: 0n,
-    interactions: "0x"
+    makerTraits: 0n // No special traits for this example
   };
   
   const orderSignature = "0x1234"; // Mock signature

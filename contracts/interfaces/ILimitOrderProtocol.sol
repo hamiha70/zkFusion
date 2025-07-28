@@ -1,72 +1,92 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
+// Import the custom types used by 1inch LOP v4
+// Note: These are from @1inch/solidity-utils - we'll need to handle the Address type
+type Address is uint256;
+type MakerTraits is uint256;
+type TakerTraits is uint256;
+
 /**
  * @title ILimitOrderProtocol
- * @dev Interface for 1inch Limit Order Protocol integration
- * @notice Simplified interface for the core fillOrder functionality
+ * @dev Interface for 1inch Limit Order Protocol v4 integration
+ * @notice Updated to match real LOP v4 contract: 0x111111125421ca6dc452d289314280a0f8842a65
  */
 interface ILimitOrderProtocol {
+    /**
+     * @dev Order struct matching 1inch LOP v4 exactly
+     * @notice This matches the real deployed contract structure
+     */
     struct Order {
         uint256 salt;
-        address makerAsset;
-        address takerAsset;
-        address maker;
-        address receiver;
-        address allowedSender;
+        Address maker;
+        Address receiver;
+        Address makerAsset;
+        Address takerAsset;
         uint256 makingAmount;
         uint256 takingAmount;
-        uint256 offsets;
-        bytes interactions;
+        MakerTraits makerTraits;
     }
     
     /**
-     * @dev Fills an order with specified parameters
-     * @param order The order to fill
-     * @param signature The maker's signature for the order
-     * @param takingAmount The amount of taker asset to take
-     * @param thresholdAmount The minimum amount of maker asset to receive
-     * @param target The target address for interactions
+     * @notice Emitted when order gets filled
+     * @param orderHash Hash of the order
+     * @param remainingAmount Amount of the maker asset that remains to be filled
+     */
+    event OrderFilled(
+        bytes32 orderHash,
+        uint256 remainingAmount
+    );
+
+    /**
+     * @notice Fills order's quote, fully or partially (whichever is possible).
+     * @param order Order quote to fill
+     * @param r R component of signature
+     * @param vs VS component of signature
+     * @param amount Taker amount to fill
+     * @param takerTraits Specifies threshold as maximum allowed takingAmount when takingAmount is zero, otherwise specifies
+     * minimum allowed makingAmount. The 2nd (0 based index) highest bit specifies whether taker wants to skip maker's permit.
+     * @return makingAmount Actual amount transferred from maker to taker
+     * @return takingAmount Actual amount transferred from taker to maker
+     * @return orderHash Hash of the filled order
      */
     function fillOrder(
         Order calldata order,
-        bytes calldata signature,
-        uint256 takingAmount,
-        uint256 thresholdAmount,
-        address target
-    ) external returns (uint256 actualMakingAmount, uint256 actualTakingAmount);
-    
+        bytes32 r,
+        bytes32 vs,
+        uint256 amount,
+        TakerTraits takerTraits
+    ) external payable returns(uint256 makingAmount, uint256 takingAmount, bytes32 orderHash);
+
     /**
-     * @dev Fills an order to a specific target address
-     * @param order The order to fill
-     * @param signature The maker's signature for the order
-     * @param takingAmount The amount of taker asset to take
-     * @param thresholdAmount The minimum amount of maker asset to receive
-     * @param target The target address to receive the maker asset
-     * @param interaction Additional interaction data
+     * @notice Same as `fillOrder` but uses contract-based signatures.
+     * @param order Order quote to fill
+     * @param signature Signature to confirm quote ownership
+     * @param amount Taker amount to fill
+     * @param takerTraits Specifies threshold as maximum allowed takingAmount when takingAmount is zero, otherwise specifies
+     * minimum allowed makingAmount. The 2nd (0 based index) highest bit specifies whether taker wants to skip maker's permit.
+     * @return makingAmount Actual amount transferred from maker to taker
+     * @return takingAmount Actual amount transferred from taker to maker
+     * @return orderHash Hash of the filled order
      */
-    function fillOrderTo(
+    function fillContractOrder(
         Order calldata order,
         bytes calldata signature,
-        uint256 takingAmount,
-        uint256 thresholdAmount,
-        address target,
-        bytes calldata interaction
-    ) external returns (uint256 actualMakingAmount, uint256 actualTakingAmount);
-    
+        uint256 amount,
+        TakerTraits takerTraits
+    ) external returns(uint256 makingAmount, uint256 takingAmount, bytes32 orderHash);
+
     /**
-     * @dev Returns the hash of an order
-     * @param order The order to hash
-     * @return bytes32 The order hash
+     * @notice Returns order hash, hashed with limit order protocol contract EIP712
+     * @param order Order
+     * @return orderHash Hash of the order
      */
-    function hashOrder(Order calldata order) external view returns (bytes32);
-    
+    function hashOrder(Order calldata order) external view returns(bytes32 orderHash);
+
     /**
-     * @dev Checks if an order is valid and fillable
-     * @param order The order to check
-     * @param signature The maker's signature
-     * @param takingAmount The amount to take
-     * @return bool True if the order is valid
+     * @notice Cancels order's quote
+     * @param makerTraits Order makerTraits
+     * @param orderHash Hash of the order to cancel
      */
-    function checkPredicate(Order calldata order, bytes calldata signature, uint256 takingAmount) external view returns (bool);
+    function cancelOrder(MakerTraits makerTraits, bytes32 orderHash) external;
 } 

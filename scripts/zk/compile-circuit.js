@@ -24,12 +24,12 @@ async function compileCircuit() {
       process.exit(1);
     }
 
-    spinner.text = 'Compiling zkDutchAuction circuit...';
+    spinner.text = 'Compiling zkDutchAuction8 circuit...';
     
-    // Compile the circuit with circomlib include path
+    // Compile the N=8 circuit with circomlib include path
     const circomlibPath = path.join(__dirname, '../../node_modules/circomlib/circuits');
     const compileResult = shell.exec(
-      `circom zkDutchAuction.circom --r1cs --wasm --sym --c -l ${circomlibPath}`,
+      `circom zkDutchAuction8.circom --r1cs --wasm --sym --c -l ${circomlibPath}`,
       { silent: false }
     );
     
@@ -39,9 +39,9 @@ async function compileCircuit() {
 
     // Check if required files were generated
     const requiredFiles = [
-      'zkDutchAuction.r1cs',
-      'zkDutchAuction_js/zkDutchAuction.wasm',
-      'zkDutchAuction.sym'
+      'zkDutchAuction8.r1cs',
+      'zkDutchAuction8_js/zkDutchAuction8.wasm',
+      'zkDutchAuction8.sym'
     ];
 
     for (const file of requiredFiles) {
@@ -53,9 +53,9 @@ async function compileCircuit() {
     spinner.succeed('Circuit compilation completed successfully!');
     
     console.log(chalk.green('\n✅ Generated files:'));
-    console.log(chalk.gray('  • zkDutchAuction.r1cs (R1CS constraint system)'));
-    console.log(chalk.gray('  • zkDutchAuction_js/zkDutchAuction.wasm (WASM witness generator)'));
-    console.log(chalk.gray('  • zkDutchAuction.sym (Symbol file)'));
+    console.log(chalk.gray('  • zkDutchAuction8.r1cs (R1CS constraint system)'));
+    console.log(chalk.gray('  • zkDutchAuction8_js/zkDutchAuction8.wasm (WASM witness generator)'));
+    console.log(chalk.gray('  • zkDutchAuction8.sym (Symbol file)'));
     
     console.log(chalk.blue('\n🔧 Next steps:'));
     console.log(chalk.blue('  npm run circuit:setup  # Run trusted setup'));

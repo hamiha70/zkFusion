@@ -180,123 +180,60 @@ For N bidders:
 
 ## 🧪 **TESTING STRATEGY**
 
-### **Testing Framework Choice: Circomkit** ⭐ **RECOMMENDED**
+### **Recommended Approach: Circomkit + TypeScript**
 
-**Why Circomkit over circom_tester:**
-- ✅ **Type Safety**: TypeScript support for complex input/output validation
-- ✅ **Advanced Assertions**: `expectPass()`, `expectFail()`, `expectConstraintCount()`
-- ✅ **Soundness Testing**: Edit witnesses to test for soundness errors
-- ✅ **Proof Testing**: Full proof generation and verification testing
-- ✅ **Modern Tooling**: Active development, comprehensive documentation
+**Why Circomkit?**
+- ✅ **Modern Testing Framework**: Built specifically for Circom circuits
+- ✅ **TypeScript Support**: Native TypeScript integration for type safety
+- ✅ **Witness Testing**: Easy input/output validation without full proof generation
+- ✅ **Performance Testing**: Built-in benchmarking and constraint analysis
+- ✅ **Integration Ready**: Works seamlessly with existing zkFusion infrastructure
 
-### **Test Categories**
+**Why TypeScript for Circuit Testing?**
+- ✅ **Type Safety**: Critical for complex circuit inputs/outputs
+- ✅ **Error Prevention**: Catch field element overflow, type mismatches early
+- ✅ **IDE Support**: Better autocomplete and error detection
+- ✅ **Documentation**: Self-documenting interfaces for circuit contracts
+
+### **Testing Categories**
 
 #### **1. Basic Functionality Tests**
 ```typescript
-describe('zkDutchAuction Basic Functionality', () => {
-  let circuit: WitnessTester<InputSignals, OutputSignals>;
-
-  it('should verify correct sorting with identity permutation', async () => {
-    const input = {
-      bidPrices: [1000, 800, 600, 400],      // Already sorted
-      bidAmounts: [100, 150, 200, 250],
-      sortedPrices: [1000, 800, 600, 400],   // Same order
-      sortedIndices: [0, 1, 2, 3],           // Identity mapping
-      makerAsk: 500,
-      // ... other inputs
-    };
-    
-    const expectedOutput = {
-      totalFill: 450,  // First 3 bids: 100+150+200
-      numWinners: 3
-    };
-
-    await circuit.expectPass(input, expectedOutput);
-  });
+// Test core auction logic with simple inputs
+it('should verify correct sorting with identity permutation', async () => {
+  const input: CircuitInputs = {
+    bidPrices: [1000n, 800n, 600n, 400n],
+    bidAmounts: [100n, 150n, 200n, 250n],
+    // ... other inputs
+  };
+  await circuit.expectPass(input, expectedOutput);
 });
 ```
 
 #### **2. Sorting Verification Tests**
 ```typescript
-it('should verify unsorted input with correct permutation', async () => {
+// Test that invalid sorting is rejected
+it('should reject invalid sorting order', async () => {
   const input = {
-    bidPrices: [600, 1000, 400, 800],       // Original unsorted
-    sortedPrices: [1000, 800, 600, 400],    // Correctly sorted
-    sortedIndices: [1, 3, 0, 2],            // Permutation: pos1→0, pos3→1, pos0→2, pos2→3
-    // ... rest of inputs
+    // ... inputs with wrong sorting
   };
-  
-  await circuit.expectPass(input);
-});
-
-it('should reject invalid sorting', async () => {
-  const invalidInput = {
-    bidPrices: [600, 1000, 400, 800],
-    sortedPrices: [800, 1000, 600, 400],    // WRONG! Not descending
-    sortedIndices: [1, 3, 0, 2],
-  };
-  
-  await circuit.expectFail(invalidInput);  // Should violate sorting constraints
+  await circuit.expectFail(input);
 });
 ```
 
-#### **3. Edge Cases & Attack Vectors**
+#### **3. Attack Vector Tests**
 ```typescript
+// Test malicious permutation attempts
 it('should reject malicious permutation', async () => {
-  const maliciousInput = {
-    bidPrices: [600, 1000, 400, 800],
-    sortedPrices: [1000, 800, 600, 400],    // Correct sorting
-    sortedIndices: [0, 1, 2, 3],            // WRONG! Doesn't match actual permutation
-  };
-  
-  await circuit.expectFail(maliciousInput);
-});
-
-it('should handle zero bids gracefully', async () => {
-  // Test with some zero amounts, zero prices
-});
-
-it('should respect maker ask limits', async () => {
-  // Test partial fills when total demand exceeds maker ask
-});
-```
-
-#### **4. Soundness & Security Tests**
-```typescript
-it('should detect witness tampering', async () => {
-  const witness = await circuit.calculateWitness(validInput);
-  
-  // Tamper with internal signals
-  const tamperedWitness = await circuit.editWitness(witness, {
-    'main.sortVerifier.sortedPrices[0]': BigInt(999999), // Fake highest bid
-  });
-  
-  await circuit.expectConstraintFail(tamperedWitness);
-});
-```
-
-#### **5. Integration Tests**
-```typescript
-it('should work with real Poseidon commitments', async () => {
-  // Use actual circomlibjs to generate commitments
-  const poseidon = await buildPoseidon();
-  const commitment = poseidon([price, amount, nonce]);
-  
   const input = {
-    // ... circuit inputs
-    commitments: [commitment, ...],
+    // ... inputs with incorrect permutation mapping
   };
-  
-  await circuit.expectPass(input);
+  await circuit.expectFail(input);
 });
 ```
 
-### **Performance & Constraint Testing**
+#### **4. Performance Tests**
 ```typescript
-it('should have expected constraint count', async () => {
-  await circuit.expectConstraintCount(1804, true); // Exact count from compilation
-});
-
 it('should generate witness within timeout', async () => {
   // Ensure witness generation completes in reasonable time
   const start = Date.now();
@@ -305,6 +242,125 @@ it('should generate witness within timeout', async () => {
   expect(duration).toBeLessThan(5000); // 5 second timeout
 });
 ```
+
+---
+
+## ⚙️ **CIRCUITS.JSON CONFIGURATION**
+
+### **Purpose & Location**
+The `circuits.json` file at the project root is the **Circomkit configuration file** that defines how our ZK circuits should be compiled and tested.
+
+**Standard Location**: ✅ **Project Root** (correct)
+- **Why**: Circomkit expects this file at the root level
+- **Tool Integration**: Our TypeScript tests reference this configuration
+- **Build Process**: `npm run test:circuits` uses this file
+
+### **Current Configuration**
+```json
+{
+  "zkDutchAuction": {
+    "file": "zkDutchAuction",
+    "template": "zkDutchAuction", 
+    "params": [4],
+    "pubs": [
+      "commitments",
+      "makerAsk", 
+      "commitmentContractAddress"
+    ]
+  }
+}
+```
+
+### **Configuration Breakdown**
+
+#### **Circuit Definition**
+- **`"zkDutchAuction"`**: Circuit identifier (used in tests)
+- **`"file"`**: Circuit file name (without `.circom` extension)
+- **`"template"`**: Template name in the circuit file
+- **`"params"`**: Template parameters `[N]` where N=4 (4 bidders)
+
+#### **Public Inputs**
+- **`"pubs"`**: Array of public input signal names
+- **`"commitments"`**: Poseidon hashes of bid commitments
+- **`"makerAsk"`**: Maximum amount maker wants to fill
+- **`"commitmentContractAddress"`**: Binds proof to specific auction
+
+### **Integration with TypeScript Tests**
+```typescript
+// In test-circuits/zkDutchAuction.test.ts
+const circomkit = new Circomkit({
+  protocol: 'groth16',
+  prime: 'bn128',
+  verbose: true
+});
+
+// Uses circuits.json configuration automatically
+const circuit = await circomkit.WitnessTester('zkDutchAuction');
+```
+
+### **Build Process Integration**
+```bash
+# package.json script uses circuits.json
+npm run test:circuits
+# → Runs: mocha test-circuits/**/*.test.ts --require ts-node/register
+```
+
+### **Adding New Circuits**
+To add additional circuits (e.g., for different auction types):
+
+```json
+{
+  "zkDutchAuction": { /* existing config */ },
+  "zkEnglishAuction": {
+    "file": "zkEnglishAuction",
+    "template": "zkEnglishAuction",
+    "params": [4],
+    "pubs": ["commitments", "reservePrice", "auctionId"]
+  }
+}
+```
+
+### **Configuration Best Practices**
+
+#### **1. Parameter Naming**
+- Use descriptive circuit identifiers
+- Match file names exactly (case-sensitive)
+- Ensure template names match circuit definitions
+
+#### **2. Public Input Selection**
+- Only include inputs that need to be public
+- Keep public input count minimal (affects proof size)
+- Use consistent naming across related circuits
+
+#### **3. Parameter Sizing**
+- Start with small N values for testing (N=4)
+- Scale up gradually as performance allows
+- Document parameter limits for production
+
+#### **4. Version Control**
+- ✅ **Commit circuits.json**: Configuration should be version controlled
+- ✅ **Include in CI/CD**: Ensure tests run with consistent configuration
+- ✅ **Document changes**: Update when adding new circuits
+
+### **Troubleshooting Common Issues**
+
+#### **Circuit Not Found**
+```bash
+Error: Circuit 'zkDutchAuction' not found in circuits.json
+```
+**Solution**: Verify file name and template name match exactly
+
+#### **Parameter Mismatch**
+```bash
+Error: Expected 1 parameter, got 2
+```
+**Solution**: Check `params` array matches template signature
+
+#### **Public Input Error**
+```bash
+Error: Public input 'commitments' not found in circuit
+```
+**Solution**: Verify signal names match circuit definition exactly
 
 ---
 

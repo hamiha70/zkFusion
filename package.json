@@ -31,7 +31,10 @@
     "external-docs:validate": "chmod +x scripts/external_docs_creation/validate-docs-quality.sh && ./scripts/external_docs_creation/validate-docs-quality.sh",
     "external-docs:complete": "npm run external-docs:setup && npm run external-docs:download-convert && npm run external-docs:validate",
     "external-docs:cleanup": "chmod +x scripts/external_docs_creation/cleanup-docs.sh && ./scripts/external_docs_creation/cleanup-docs.sh",
-    "cursor:rules": "chmod +x scripts/external_docs_creation/generate-cursor-rules.sh && ./scripts/external_docs_creation/generate-cursor-rules.sh"
+    "cursor:rules": "chmod +x scripts/external_docs_creation/generate-cursor-rules.sh && ./scripts/external_docs_creation/generate-cursor-rules.sh",
+    "build:ts": "tsc",
+    "type-check": "tsc --noEmit",
+    "test:circuits": "mocha test-circuits/**/*.test.ts --require ts-node/register --timeout 60000"
   },
   "keywords": [
     "zk",
@@ -51,12 +54,16 @@
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^4.0.0",
     "@nomicfoundation/hardhat-verify": "^2.0.0",
+    "@types/node": "^24.1.0",
+    "circomkit": "^0.3.4",
     "hardhat": "^2.19.0",
     "hardhat-gas-reporter": "^1.0.9",
     "prettier": "^3.0.0",
     "prettier-plugin-solidity": "^1.2.0",
     "solhint": "^4.0.0",
-    "solidity-coverage": "^0.8.5"
+    "solidity-coverage": "^0.8.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^5.0.0",

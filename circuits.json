@@ -1,0 +1,12 @@
+{
+  "zkDutchAuction": {
+    "file": "zkDutchAuction",
+    "template": "zkDutchAuction",
+    "params": [4],
+    "pubs": [
+      "commitments",
+      "makerAsk", 
+      "commitmentContractAddress"
+    ]
+  }
+} 

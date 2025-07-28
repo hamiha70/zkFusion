@@ -5,6 +5,10 @@ node_modules/
 artifacts/
 cache/
 
+# TypeScript build artifacts
+dist/
+*.tsbuildinfo
+
 # ZK artifacts (large files)
 circuits/*.r1cs
 circuits/*.sym

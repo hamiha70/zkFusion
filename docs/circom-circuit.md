@@ -428,4 +428,8 @@ BidCommitment → Reveal → Sort → ZK Proof → Executor → LOP Fill
 
 ---
 
-**This document captures the complete journey from initial circuit design challenges to the breakthrough sorting verification solution. The next step is implementing comprehensive Circomkit testing to validate our circuit behaves exactly as designed.** 
+**This document captures the complete journey from initial circuit design challenges to the breakthrough sorting verification solution. The next step is implementing comprehensive Circomkit testing to validate our circuit behaves exactly as designed.**
+
+**Note**: For our JavaScript vs TypeScript development strategy, see [JS-TS.md](JS-TS.md).
+
+--- 

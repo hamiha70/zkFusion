@@ -26,9 +26,10 @@ async function compileCircuit() {
 
     spinner.text = 'Compiling zkDutchAuction circuit...';
     
-    // Compile the circuit
+    // Compile the circuit with circomlib include path
+    const circomlibPath = path.join(__dirname, '../../node_modules/circomlib/circuits');
     const compileResult = shell.exec(
-      'circom zkDutchAuction.circom --r1cs --wasm --sym --c',
+      `circom zkDutchAuction.circom --r1cs --wasm --sym --c -l ${circomlibPath}`,
       { silent: false }
     );
     

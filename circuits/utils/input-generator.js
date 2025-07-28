@@ -11,7 +11,7 @@ const path = require('path');
  * @returns {Object} - Circuit inputs object
  */
 async function generateCircuitInputs(bids, commitments, makerAsk, commitmentContractAddress) {
-  const N = 4; // Circuit size (must match Circom template)
+  const N = 8; // Circuit size (must match Circom template)
   
   // Validate inputs
   if (bids.length > N) {

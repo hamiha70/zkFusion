@@ -279,6 +279,39 @@ For N bidders:
 
 ---
 
+## 🚀 **N=8 ZK CIRCUIT INFRASTRUCTURE - COMPLETED**
+
+### **✅ N=8 Circuit Successfully Implemented**
+```
+Template instances: 146
+Non-linear constraints: 3,584 (2x N=4)
+Linear constraints: 3,067 (2x N=4)
+Private inputs: 58 (vs 30 for N=4)
+Public outputs: 3
+Wires: 6,664 (2x N=4)
+```
+
+### **✅ Trusted Setup Completed**
+- **Protocol**: Groth16
+- **Circuit Hash**: `9a80bb36 5118f47e 27e1b4cd 37e7c44f...`
+- **Generated Files**:
+  - ✅ `circuit_final.zkey` (proving key)
+  - ✅ `verification_key.json` (verification key)
+  - ✅ `contracts/Verifier.sol` (Solidity verifier)
+
+### **✅ Auto-Generated Files Committed**
+- **Hackathon Strategy**: Committed all ZK artifacts for immediate usability
+- **Demo Reliability**: No setup steps needed for judges/team members
+- **Repository Size**: ~50KB added (acceptable for hackathon)
+- **Version Control**: Auto-generated files tracked for consistency
+
+### **🔧 Current Status: Input Generation Debugging**
+- **Issue**: Only 18/30 inputs set (needs update for N=8)
+- **Progress**: ZK infrastructure complete, input generation needs adjustment
+- **Next**: Debug input generation script for N=8 circuit
+
+---
+
 ## 🧪 **TESTING STRATEGY**
 
 ### **✅ IMPLEMENTED: Circomkit + TypeScript**

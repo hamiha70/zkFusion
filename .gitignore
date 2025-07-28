@@ -39,3 +39,6 @@ deployments/
 
 # External Documentation
 docs_external/
+
+# temp files
+temp/

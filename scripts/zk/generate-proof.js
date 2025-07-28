@@ -14,7 +14,7 @@ async function generateProof(inputData = null) {
     
     // Check required files exist
     const requiredFiles = [
-      'zkDutchAuction_js/zkDutchAuction.wasm',
+      'zkDutchAuction8_js/zkDutchAuction8.wasm',
       'circuit_final.zkey'
     ];
     
@@ -46,8 +46,8 @@ async function generateProof(inputData = null) {
         commitments.push(commitment);
       }
       
-      // Pad commitments to 4 elements
-      while (commitments.length < 4) {
+      // Pad commitments to 8 elements
+      while (commitments.length < 8) {
         commitments.push('0');
       }
 
@@ -79,7 +79,7 @@ async function generateProof(inputData = null) {
     // Generate witness
     const { witness } = await snarkjs.groth16.fullProve(
       circuitInputs,
-      path.join(circuitsDir, "zkDutchAuction_js/zkDutchAuction.wasm"),
+      path.join(circuitsDir, "zkDutchAuction8_js/zkDutchAuction8.wasm"),
       path.join(circuitsDir, "circuit_final.zkey")
     );
 

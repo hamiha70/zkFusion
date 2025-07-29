@@ -3,7 +3,12 @@
  */
 
 // Import the mock implementation
-const { mockPoseidonConsistent, generateMockCommitment } = require('./circuits/utils/mock-poseidon.ts');
+const { 
+  mockPoseidonConsistent, 
+  generateMockCommitment, 
+  generateMockNullCommitment,
+  testMockPoseidon 
+} = require('./circuits/utils/mock-poseidon.js');
 
 console.log('🧪 Testing mock Poseidon implementation...');
 
@@ -33,5 +38,13 @@ const contractAddress = '0x2000000000000000000000000000000000000000';
 
 const commitment = generateMockCommitment(testBid, contractAddress);
 console.log(`Mock commitment: ${commitment.toString()}`);
+
+// Test 4: Null commitment
+const nullCommitment = generateMockNullCommitment(contractAddress);
+console.log(`Null commitment: ${nullCommitment.toString()}`);
+
+// Test 5: Run comprehensive test suite
+console.log('\n🧪 Running comprehensive test suite...');
+testMockPoseidon();
 
 console.log('✅ Mock Poseidon tests completed'); 

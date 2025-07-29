@@ -13,7 +13,8 @@ import { Circomkit } from 'circomkit';
 
 // Import our utilities
 import { generateCircuitInputs, loadInputsFromFile } from '../circuits/utils/input-generator';
-import { simulateAuction, type Bid, type AuctionConstraints } from '../circuits/utils/auction-simulator';
+import { simulateAuction } from '../circuits/utils/auction-simulator';
+import type { Bid, AuctionConstraints } from '../circuits/utils/types';
 import { generateCommitmentReal } from '../circuits/utils/hash-utils';
 
 describe('Circuit Witness Generation - Real Hash Integration', function() {

@@ -10,7 +10,8 @@ import { expect } from 'chai';
 
 // Import our utilities
 import { generateCircuitInputs } from '../circuits/utils/input-generator';
-import { simulateAuction, type Bid, type AuctionConstraints } from '../circuits/utils/auction-simulator';
+import { simulateAuction } from '../circuits/utils/auction-simulator';
+import type { Bid, AuctionConstraints } from '../circuits/utils/types';
 import { generateCommitmentReal } from '../circuits/utils/hash-utils';
 
 describe('Constraint Debug Test - Systematic Analysis', function() {

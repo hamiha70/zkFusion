@@ -1,28 +1,19 @@
 /**
- * Functional Validation Tests for zkFusion Auction Logic
+ * Functional Validation Test Suite
  * 
- * Tests the core auction logic WITHOUT circuit compilation.
- * This allows rapid iteration and validation of business logic
- * before dealing with ZK circuit complexity.
+ * Tests the auction logic in pure JavaScript/TypeScript without ZK compilation.
+ * This ensures our business logic is correct before dealing with circuit complexity.
  */
 
 import { describe, it } from 'mocha';
 import { expect } from 'chai';
-import * as fs from 'fs';
-import * as path from 'path';
-
-// Import auction logic from dedicated modules
-import { 
-  simulateAuction, 
-  generateSortingArrays, 
+import {
+  simulateAuction,
+  generateSortingArrays,
   generateWinnerBits,
-  formatEther,
-  type Bid, 
-  type AuctionConstraints, 
-  type AuctionResult 
 } from '../circuits/utils/auction-simulator';
-
-import { generateCommitment } from '../circuits/utils/hash-utils';
+import type { Bid, AuctionConstraints, AuctionResult } from '../circuits/utils/types';
+import { mockPoseidonHash, generateCommitment } from '../circuits/utils/hash-utils';
 
 // Global test logging
 interface TestCaseLog {
@@ -80,25 +71,25 @@ function logTestCase(
   console.log(`\n📥 INPUTS:`);
   console.log(`  Bids (${inputs.bids.length}):`);
   inputs.bids.forEach((bid, i) => {
-    console.log(`    [${i}] Price: ${formatEther(bid.price)} ETH, Amount: ${formatEther(bid.amount)} tokens`);
+    console.log(`    [${i}] Price: ${bid.price} ETH, Amount: ${bid.amount} tokens`);
     console.log(`        Address: ${bid.bidderAddress}`);
   });
   
   console.log(`  Constraints:`);
-  console.log(`    Min Price: ${formatEther(inputs.constraints.makerMinimumPrice)} ETH per token`);
-  console.log(`    Max Amount: ${formatEther(inputs.constraints.makerMaximumAmount)} tokens`);
+  console.log(`    Min Price: ${inputs.constraints.makerMinimumPrice} ETH per token`);
+  console.log(`    Max Amount: ${inputs.constraints.makerMaximumAmount} tokens`);
   console.log(`    Contract: ${inputs.constraints.commitmentContractAddress}`);
   
   console.log(`\n📤 EXPECTED OUTPUT:`);
   console.log(`  Winners: ${expectedOutput.numWinners}`);
-  console.log(`  Total Fill: ${formatEther(expectedOutput.totalFill)} tokens`);
-  console.log(`  Weighted Avg Price: ${formatEther(expectedOutput.weightedAvgPrice)} ETH per token`);
+  console.log(`  Total Fill: ${expectedOutput.totalFill} tokens`);
+  console.log(`  Weighted Avg Price: ${expectedOutput.weightedAvgPrice} ETH per token`);
   console.log(`  Winner Bitmask: 0b${expectedOutput.winnerBitmask.toString(2).padStart(8, '0')} (${expectedOutput.winnerBitmask})`);
   
   console.log(`\n📤 ACTUAL OUTPUT:`);
   console.log(`  Winners: ${actualOutput.numWinners}`);
-  console.log(`  Total Fill: ${formatEther(actualOutput.totalFill)} tokens`);
-  console.log(`  Weighted Avg Price: ${formatEther(actualOutput.weightedAvgPrice)} ETH per token`);
+  console.log(`  Total Fill: ${actualOutput.totalFill} tokens`);
+  console.log(`  Weighted Avg Price: ${actualOutput.weightedAvgPrice} ETH per token`);
   console.log(`  Winner Bitmask: 0b${actualOutput.winnerBitmask.toString(2).padStart(8, '0')} (${actualOutput.winnerBitmask})`);
   
   if (!passed) {

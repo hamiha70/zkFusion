@@ -47,10 +47,10 @@ async function setupCeremony() {
     spinner.text = `Using powers of tau file: ${ptauFile}`;
     console.log(chalk.blue(`\n📋 Using ptau file: ${ptauFile}`));
 
-    // Generate proving key
-    spinner.text = 'Generating proving key...';
+    // Generate proving key for N=8 circuit
+    spinner.text = 'Generating proving key for N=8 circuit...';
     const setupResult = shell.exec(
-      `snarkjs groth16 setup zkDutchAuction.r1cs ${ptauFile} circuit_final.zkey`,
+      `snarkjs groth16 setup zkDutchAuction8.r1cs ${ptauFile} circuit_final.zkey`,
       { silent: false }
     );
     

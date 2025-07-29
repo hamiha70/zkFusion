@@ -1,22 +1,13 @@
 {
-  "zkDutchAuction4": {
-    "file": "circuits/zkDutchAuction",
-    "template": "zkDutchAuction",
-    "params": [4],
-    "pubs": [
-      "commitments",
-      "makerAsk", 
-      "commitmentContractAddress"
-    ]
-  },
   "zkDutchAuction8": {
     "file": "circuits/zkDutchAuction",
     "template": "zkDutchAuction",
     "params": [8],
     "pubs": [
-      "commitments",
-      "makerAsk", 
-      "commitmentContractAddress"
+      "totalFill",
+      "weightedAvgPrice", 
+      "numWinners",
+      "winnerBitmask"
     ]
   }
 } 

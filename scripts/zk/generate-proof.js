@@ -46,9 +46,10 @@ async function generateProof(inputData = null) {
         commitments.push(commitment);
       }
       
-      // Pad commitments to 8 elements
+      // Pad commitments to 8 elements with Poseidon(0,0,0) for null bids
+      const nullCommitment = await hashBid(0n, 0n, 0n); // Poseidon(0,0,0)
       while (commitments.length < 8) {
-        commitments.push('0');
+        commitments.push(nullCommitment);
       }
 
       const makerAsk = 400n;

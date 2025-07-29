@@ -110,7 +110,7 @@ cat > .cursor/api-documentation.cursor-rules << 'EOF'
 - Use consistent formatting and structure
 EOF
 
-echo "✅ Cursor rules generated in .cursor/ directory"
+echo "✅ Cursor rules generated in .cursor/ directory" 
 echo "📁 Created rules for:"
 echo "  - Hardhat development"
 echo "  - 1inch integration"

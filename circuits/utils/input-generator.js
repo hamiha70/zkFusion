@@ -3,6 +3,39 @@ const fs = require('fs');
 const path = require('path');
 
 /**
+ * Generate sorting arrays for ZK circuit verification
+ * @param {Array} bids - Array of bid objects (already padded to N elements)
+ * @returns {Object} - {sortedPrices, sortedAmounts, sortedIndices}
+ */
+function generateSortingArrays(bids) {
+  const N = bids.length;
+  
+  // Create array with original indices
+  const bidsWithIndices = bids.map((bid, originalIndex) => ({
+    ...bid,
+    originalIndex
+  }));
+  
+  // Sort by price descending (null bids with price=0 will sort to end)
+  const sortedBidsWithIndices = bidsWithIndices.sort((a, b) => {
+    const priceA = BigInt(a.price.toString());
+    const priceB = BigInt(b.price.toString());
+    return priceB > priceA ? 1 : priceB < priceA ? -1 : 0;
+  });
+  
+  // Extract sorted arrays
+  const sortedPrices = sortedBidsWithIndices.map(bid => formatFieldElement(bid.price));
+  const sortedAmounts = sortedBidsWithIndices.map(bid => formatFieldElement(bid.amount));
+  const sortedIndices = sortedBidsWithIndices.map(bid => formatFieldElement(bid.originalIndex));
+  
+  return {
+    sortedPrices,
+    sortedAmounts,
+    sortedIndices
+  };
+}
+
+/**
  * Generate circuit inputs from bid data
  * @param {Array} bids - Array of bid objects {price, amount, nonce, bidder}
  * @param {Array} commitments - Array of commitment hashes
@@ -69,10 +102,21 @@ async function generateCircuitInputs(bids, commitments, makerAsk, commitmentCont
     }
   }
 
+  // Generate sorting arrays for ZK circuit
+  const { sortedPrices, sortedAmounts, sortedIndices } = generateSortingArrays(paddedBids);
+
   return {
+    // Private inputs (revealed bids)
     bidPrices,
     bidAmounts,
     nonces,
+    
+    // Private inputs (sorting-related)
+    sortedPrices,
+    sortedAmounts,
+    sortedIndices,
+    
+    // Private inputs (previously public, now private for zero-knowledge)
     commitments: formattedCommitments,
     makerAsk: formattedMakerAsk,
     commitmentContractAddress: formattedContractAddress
@@ -81,13 +125,18 @@ async function generateCircuitInputs(bids, commitments, makerAsk, commitmentCont
 
 /**
  * Simulate auction logic to determine winners
- * @param {Array} bids - Array of bid objects
+ * @param {Array} bids - Array of bid objects (with originalIndex property)
  * @param {BigInt|string|number} makerAsk - Maximum amount to fill
- * @returns {Object} - Auction results
+ * @returns {Object} - Auction results including winner bitmask
  */
 function simulateAuction(bids, makerAsk) {
-  // Sort bids by price descending
-  const sortedBids = [...bids].sort((a, b) => {
+  const N = 8; // Fixed circuit size
+  
+  // Sort bids by price descending, preserving original indices
+  const sortedBids = [...bids].map((bid, index) => ({
+    ...bid,
+    originalIndex: index
+  })).sort((a, b) => {
     const priceA = BigInt(a.price.toString());
     const priceB = BigInt(b.price.toString());
     return priceB > priceA ? 1 : priceB < priceA ? -1 : 0;
@@ -96,6 +145,7 @@ function simulateAuction(bids, makerAsk) {
   let totalFill = 0n;
   let totalWeighted = 0n;
   const winners = [];
+  let winnerBitmask = 0;
   const maxFill = BigInt(makerAsk.toString());
 
   for (const bid of sortedBids) {
@@ -106,46 +156,36 @@ function simulateAuction(bids, makerAsk) {
       totalFill += amount;
       totalWeighted += price * amount;
       winners.push(bid);
+      
+      // Set bit for this winner's original position
+      winnerBitmask |= (1 << bid.originalIndex);
     }
   }
 
   const weightedAvgPrice = totalFill > 0n ? totalWeighted / totalFill : 0n;
+  const numWinners = winners.length;
 
   return {
     winners,
     totalFill,
     weightedAvgPrice,
-    totalWeighted
+    totalWeighted,
+    numWinners,
+    winnerBitmask
   };
 }
 
 /**
  * Generate expected public outputs for circuit
  * @param {Object} auctionResults - Results from simulateAuction
- * @param {Array} commitments - All commitments (padded to N)
- * @param {BigInt|string|number} makerAsk - Maker ask amount
- * @param {string} commitmentContractAddress - Contract address
- * @returns {Array} - Expected public outputs
+ * @returns {Array} - Expected public outputs [totalFill, weightedAvgPrice, numWinners, winnerBitmask]
  */
-function generateExpectedOutputs(auctionResults, commitments, makerAsk, commitmentContractAddress) {
-  const N = 4;
-  
-  // Create winning commitments array (only winners have non-zero commitments in output)
-  const winningCommitments = new Array(N).fill('0');
-  
-  // Map winners to their commitment positions
-  for (let i = 0; i < auctionResults.winners.length && i < N; i++) {
-    // Find the commitment index for this winner
-    // This is simplified - in practice, you'd need to track the original indices
-    winningCommitments[i] = formatFieldElement(commitments[i]);
-  }
-
+function generateExpectedOutputs(auctionResults) {
   return [
-    ...winningCommitments,                                              // [0-3] winning commitments
-    formatFieldElement(auctionResults.totalFill),                      // [4] totalFill
-    formatFieldElement(auctionResults.weightedAvgPrice),               // [5] weightedAvgPrice  
-    formatFieldElement(makerAsk),                                      // [6] makerAsk
-    addressToFieldElement(commitmentContractAddress)                   // [7] contract address
+    auctionResults.totalFill.toString(),
+    auctionResults.weightedAvgPrice.toString(),
+    auctionResults.numWinners.toString(),
+    auctionResults.winnerBitmask.toString()
   ];
 }
 

@@ -3,6 +3,10 @@ pragma circom 2.0.0;
 include "../node_modules/circomlib/circuits/poseidon.circom";
 include "../node_modules/circomlib/circuits/comparators.circom";
 
+// Fixed circuit size for zkFusion hackathon
+// For production, deploy separate circuits for different N values
+const N_MAX_BIDS = 8;
+
 // Subcircuit to verify that a permutation represents a correctly sorted order
 // This is much more efficient than implementing sorting in ZK
 template SortingVerifier(N) {
@@ -73,6 +77,7 @@ template zkDutchAuction(N) {
     signal output totalFill;
     signal output weightedAvgPrice;
     signal output numWinners;
+    signal output winnerBitmask;  // NEW: 8-bit bitmask indicating winners
     
     // 1. Verify sorting is correct
     component sortVerifier = SortingVerifier(N);
@@ -103,6 +108,9 @@ template zkDutchAuction(N) {
     component lessThan[N];
     signal bidValue[N]; // Intermediate signal to avoid triple multiplication
     
+    // Winner bitmask validation components
+    component bitExtractor[N];
+    
     for (var i = 0; i < N; i++) {
         // Check if adding this bid would exceed makerAsk
         lessThan[i] = LessThan(64);
@@ -111,6 +119,12 @@ template zkDutchAuction(N) {
         
         // If we can fit this bid, include it
         isWinner[i] <== lessThan[i].out;
+        
+        // INTEGRATED: Validate winner bitmask bit i matches isWinner[i]
+        bitExtractor[i] = IsEqual();
+        bitExtractor[i].in[0] <== (winnerBitmask >> i) & 1;
+        bitExtractor[i].in[1] <== isWinner[i];
+        bitExtractor[i].out === 1; // Bit i must equal isWinner[i]
         
         // Break down triple multiplication into quadratic steps
         bidValue[i] <== sortedPrices[i] * sortedAmounts[i]; // First multiplication

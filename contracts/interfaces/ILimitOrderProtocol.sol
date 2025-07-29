@@ -37,7 +37,7 @@ interface ILimitOrderProtocol {
         bytes32 orderHash,
         uint256 remainingAmount
     );
-
+    
     /**
      * @notice Fills order's quote, fully or partially (whichever is possible).
      * @param order Order quote to fill
@@ -57,7 +57,7 @@ interface ILimitOrderProtocol {
         uint256 amount,
         TakerTraits takerTraits
     ) external payable returns(uint256 makingAmount, uint256 takingAmount, bytes32 orderHash);
-
+    
     /**
      * @notice Same as `fillOrder` but uses contract-based signatures.
      * @param order Order quote to fill
@@ -75,14 +75,14 @@ interface ILimitOrderProtocol {
         uint256 amount,
         TakerTraits takerTraits
     ) external returns(uint256 makingAmount, uint256 takingAmount, bytes32 orderHash);
-
+    
     /**
      * @notice Returns order hash, hashed with limit order protocol contract EIP712
      * @param order Order
      * @return orderHash Hash of the order
      */
     function hashOrder(Order calldata order) external view returns(bytes32 orderHash);
-
+    
     /**
      * @notice Cancels order's quote
      * @param makerTraits Order makerTraits

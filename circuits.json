@@ -5,8 +5,8 @@
     "params": [8],
     "pubs": [
       "totalFill",
-      "weightedAvgPrice", 
-      "numWinners",
+      "weightedAvgPrice",
+      "numWinners", 
       "winnerBitmask"
     ]
   }

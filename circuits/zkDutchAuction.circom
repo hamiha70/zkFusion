@@ -3,10 +3,6 @@ pragma circom 2.0.0;
 include "../node_modules/circomlib/circuits/poseidon.circom";
 include "../node_modules/circomlib/circuits/comparators.circom";
 
-// Fixed circuit size for zkFusion hackathon
-// For production, deploy separate circuits for different N values
-const N_MAX_BIDS = 8;
-
 // Subcircuit to verify that a permutation represents a correctly sorted order
 // This is much more efficient than implementing sorting in ZK
 template SortingVerifier(N) {
@@ -56,28 +52,31 @@ template SortingVerifier(N) {
     }
 }
 
-// Main zkFusion auction circuit with sorting verification
+// Main zkFusion auction circuit with 4-input Poseidon hash and dual constraints
 template zkDutchAuction(N) {
-    // Private inputs (from revealed bids)
+    // Private inputs (revealed bids)
     signal input bidPrices[N];
     signal input bidAmounts[N];
-    signal input nonces[N];
+    signal input bidderAddresses[N];  // Bidder addresses for hash binding
+    // Removed nonces - using commitmentContractAddress for uniqueness
     
     // Private inputs (sorting-related)
     signal input sortedPrices[N];    // Bids sorted by price (descending)
     signal input sortedAmounts[N];   // Corresponding amounts
     signal input sortedIndices[N];   // Mapping from sorted position to original position
+    signal input winnerBits[N];      // Individual winner bits (0 or 1) instead of bitmask
     
-    // Public inputs
-    signal input commitments[N];           // On-chain commitments
-    signal input makerAsk;                 // Maximum amount maker wants to fill
-    signal input commitmentContractAddress; // Address of commitment contract
+    // Public inputs (from commitment contract)
+    signal input commitments[N];              // Poseidon hashes (public)
+    signal input commitmentContractAddress;  // Contract address (replay protection)
+    signal input makerMinimumPrice;          // Minimum price per token
+    signal input makerMaximumAmount;         // Maximum tokens to sell
     
-    // Public outputs
+    // Public outputs (aggregated for efficiency)
     signal output totalFill;
-    signal output weightedAvgPrice;
+    signal output weightedAvgPrice;  // Actually total value - contract calculates price
     signal output numWinners;
-    signal output winnerBitmask;  // NEW: 8-bit bitmask indicating winners
+    signal output winnerBitmask;     // Computed from winnerBits for output
     
     // 1. Verify sorting is correct
     component sortVerifier = SortingVerifier(N);
@@ -87,17 +86,18 @@ template zkDutchAuction(N) {
     sortVerifier.sortedAmounts <== sortedAmounts;
     sortVerifier.sortedIndices <== sortedIndices;
     
-    // 2. Verify commitments match revealed bids
+    // 2. Verify commitments match revealed bids using 4-input Poseidon (no nonce)
     component poseidon[N];
     for (var i = 0; i < N; i++) {
-        poseidon[i] = Poseidon(3);
+        poseidon[i] = Poseidon(4);  // UPDATED: 4 inputs instead of 5 (removed nonce)
         poseidon[i].inputs[0] <== bidPrices[i];
         poseidon[i].inputs[1] <== bidAmounts[i];
-        poseidon[i].inputs[2] <== nonces[i];
+        poseidon[i].inputs[2] <== bidderAddresses[i];  // Address binding
+        poseidon[i].inputs[3] <== commitmentContractAddress;  // Contract binding (was input 3, nonce removed)
         poseidon[i].out === commitments[i];
     }
     
-    // 3. Calculate auction results using sorted bids (greedy fill)
+    // 3. Calculate auction results using sorted bids with dual constraints
     signal cumulativeFill[N+1];
     signal cumulativeValue[N+1];
     signal isWinner[N];
@@ -105,26 +105,23 @@ template zkDutchAuction(N) {
     cumulativeFill[0] <== 0;
     cumulativeValue[0] <== 0;
     
-    component lessThan[N];
-    signal bidValue[N]; // Intermediate signal to avoid triple multiplication
-    
-    // Winner bitmask validation components
-    component bitExtractor[N];
+    component canFit[N];      // Quantity constraint check
+    component priceOK[N];     // Price constraint check
+    signal bidValue[N];       // Intermediate signal to avoid triple multiplication
     
     for (var i = 0; i < N; i++) {
-        // Check if adding this bid would exceed makerAsk
-        lessThan[i] = LessThan(64);
-        lessThan[i].in[0] <== cumulativeFill[i] + sortedAmounts[i];
-        lessThan[i].in[1] <== makerAsk + 1; // +1 because LessThan is strict
+        // Check if this bid fits within remaining token capacity
+        canFit[i] = LessThan(64);
+        canFit[i].in[0] <== cumulativeFill[i] + sortedAmounts[i];
+        canFit[i].in[1] <== makerMaximumAmount + 1;  // +1 for strict less-than
         
-        // If we can fit this bid, include it
-        isWinner[i] <== lessThan[i].out;
+        // Check if price meets minimum requirement per token
+        priceOK[i] = GreaterEqThan(64);
+        priceOK[i].in[0] <== sortedPrices[i];
+        priceOK[i].in[1] <== makerMinimumPrice;
         
-        // INTEGRATED: Validate winner bitmask bit i matches isWinner[i]
-        bitExtractor[i] = IsEqual();
-        bitExtractor[i].in[0] <== (winnerBitmask >> i) & 1;
-        bitExtractor[i].in[1] <== isWinner[i];
-        bitExtractor[i].out === 1; // Bit i must equal isWinner[i]
+        // Winner if BOTH constraints satisfied: fits capacity AND meets price
+        isWinner[i] <== canFit[i].out * priceOK[i].out;
         
         // Break down triple multiplication into quadratic steps
         bidValue[i] <== sortedPrices[i] * sortedAmounts[i]; // First multiplication
@@ -137,33 +134,34 @@ template zkDutchAuction(N) {
     // 4. Calculate final outputs
     totalFill <== cumulativeFill[N];
     
-    // Calculate weighted average price (avoiding division in circuit)
-    // We output total value and let the contract calculate price = totalValue / totalFill
-    signal totalValue;
-    totalValue <== cumulativeValue[N];
+    // Output total value instead of weighted average (avoid division in circuit)
+    // Contract will calculate weightedAvgPrice = totalValue / totalFill
+    weightedAvgPrice <== cumulativeValue[N];
     
-    // For simplicity, we'll output totalValue and let off-chain calculate weighted avg
-    // This avoids division in the circuit which is expensive
-    weightedAvgPrice <== totalValue; // Contract will divide by totalFill
-    
-    // Count winners
+    // 5. Count winners and validate bitmask
     signal winnerCount[N+1];
+    signal bitmaskSum[N+1];  // Accumulate bitmask value
     winnerCount[0] <== 0;
+    bitmaskSum[0] <== 0;
+    
+    // Bitmask validation components
+    component bitValidator[N];
+    
     for (var i = 0; i < N; i++) {
+        // Count winners
         winnerCount[i+1] <== winnerCount[i] + isWinner[i];
+        
+        // Validate that winnerBits[i] matches isWinner[i]
+        bitValidator[i] = IsEqual();
+        bitValidator[i].in[0] <== winnerBits[i];
+        bitValidator[i].in[1] <== isWinner[i];
+        bitValidator[i].out === 1; // Bit i must equal isWinner[i]
+        
+        // Calculate bitmask: sum of winnerBits[i] * 2^i
+        bitmaskSum[i+1] <== bitmaskSum[i] + winnerBits[i] * (2 ** i);
     }
     numWinners <== winnerCount[N];
-    
-    // 5. Verify commitment contract address binding
-    signal addressHash;
-    component addressPoseidon = Poseidon(1);
-    addressPoseidon.inputs[0] <== commitmentContractAddress;
-    addressHash <== addressPoseidon.out;
-    
-    // This creates a constraint that links the proof to a specific commitment contract
-    // Preventing proof reuse across different auctions
-    signal addressBinding;
-    addressBinding <== addressHash * totalFill; // Binds address to auction result
+    winnerBitmask <== bitmaskSum[N];
 }
 
 // Template exported for use by test wrapper

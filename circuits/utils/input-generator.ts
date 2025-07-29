@@ -19,6 +19,7 @@ import {
 } from './auction-simulator';
 
 import { generateCommitment } from './hash-utils';
+import { realPoseidonHash } from './hash-utils';
 
 // Import existing JavaScript utilities (TODO: Convert to TypeScript)
 const { hashBid, formatFieldElement, isValidFieldElement, addressToFieldElement } = require('./poseidon');
@@ -103,8 +104,15 @@ export async function generateCircuitInputs(
   // Format commitments (pad to N if needed)
   const paddedCommitments = [...commitments];
   while (paddedCommitments.length < N) {
-    // Use Poseidon(0,0,0) for null commitments as per spec
-    paddedCommitments.push('0'); // TODO: Replace with actual Poseidon(0,0,0,contractAddress)
+    // FIXED: Use real Poseidon(0,0,0,contractAddress) for null commitments
+    // This matches what the circuit expects for null bids
+    const nullCommitment = await realPoseidonHash([
+      0n,                              // price = 0 (null bid)
+      0n,                              // amount = 0 (null bid)  
+      0n,                              // bidderAddress = 0 (null bid)
+      BigInt('0x' + commitmentContractAddress.replace('0x', '')) // contractAddress
+    ]);
+    paddedCommitments.push(nullCommitment.toString());
   }
   const formattedCommitments = paddedCommitments.map(c => formatFieldElement(c));
 

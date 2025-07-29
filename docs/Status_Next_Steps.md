@@ -1221,4 +1221,46 @@ console.log(`Gas savings vs on-chain null generation: ~50k gas (~$2.50 at 20 gwe
 
 **CRITICAL QUESTION ANSWERED**: The CommitmentContract CAN generate Poseidon hashes on-chain, but the optimal architecture uses off-chain generation for cost efficiency while maintaining full security through ZK proof validation.
 
-This analysis provides a clear, economically justified path forward for zkFusion implementation. 
+This analysis provides a clear, economically justified path forward for zkFusion implementation.
+
+---
+
+## 🚨 **CRITICAL BLOCKER DISCOVERED - POSEIDON HASH INCOMPATIBILITY**
+
+**Date**: January 2025  
+**Status**: 🔴 **SYSTEM BLOCKING ISSUE**  
+**Impact**: Complete ZK proof generation failure  
+
+### **Root Cause Identified**
+**Poseidon hash implementation mismatch** between:
+- **Circuit**: `circomlib/circuits/poseidon.circom` (original Poseidon with specific constants)
+- **JavaScript**: `circomlibjs@0.1.7` (different implementation/variant)
+
+**Result**: Same inputs produce different hash outputs, causing `Assert Failed` at line 97 in circuit.
+
+### **Comprehensive Analysis**
+📋 **Full documentation**: [`docs/PoseidonHashComplications.md`](./PoseidonHashComplications.md)
+
+**Key Findings**:
+- ✅ Address conversion issue resolved (was contributing factor)
+- ❌ Field element bounds not the issue (even tiny values fail)
+- 🎯 **Core Issue**: Different Poseidon implementations using different constants/parameters
+
+### **Solution Options**
+1. **Option A**: Compatible JavaScript Poseidon (4-8 hours) ⭐ **RECOMMENDED**
+2. **Option B**: Switch to Poseidon2 (6-10 hours) 🔄 **ALTERNATIVE**  
+3. **Option C**: Mock implementation for hackathon (30 minutes) 🎭 **IMMEDIATE FALLBACK**
+4. **Option D**: Extract circuit constants (8-12 hours) 🔧 **DEEP FIX**
+
+### **Immediate Action Plan**
+**Phase 1**: Implement mock Poseidon for hackathon demo (allows progress)  
+**Phase 2**: Research and implement proper solution post-hackathon  
+**Phase 3**: Replace mock with cryptographically secure implementation  
+
+### **Next Steps**
+1. **Document issue** ✅ **COMPLETED** - Comprehensive analysis in `PoseidonHashComplications.md`
+2. **Commit current progress** - Preserve investigation work
+3. **Implement TypeScript migration** - Better tooling for debugging and implementation
+4. **Choose solution approach** - Based on time constraints and requirements
+
+**⚠️ CRITICAL**: Mock implementation is NOT cryptographically secure and must be replaced before production deployment. 

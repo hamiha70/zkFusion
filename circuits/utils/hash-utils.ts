@@ -125,16 +125,19 @@ export async function realPoseidonHash(inputs: bigint[]): Promise<bigint> {
 }
 
 /**
- * Generate commitment hash using real Poseidon(4)
+ * Generate commitment hash using real Poseidon(4) - FIXED TO MATCH CIRCUIT
  */
 export async function generateCommitmentReal(bid: Bid, contractAddress: string): Promise<bigint> {
-  // Use the same address conversion as the circuit
-  const contractBigInt = BigInt('0x' + contractAddress.replace('0x', ''));
+  // FIXED: Use raw BigInt addresses (no conversion) to match circuit expectations
+  const bidderBigInt = BigInt(bid.bidderAddress);
+  const contractBigInt = BigInt(contractAddress);
+  
+  // Use the exact same input format as the circuit
   const inputs = [
-    bid.price,
-    bid.amount,
-    contractBigInt, // Convert address to bigint
-    contractBigInt  // Contract address for uniqueness
+    bid.price,           // price
+    bid.amount,          // amount
+    bidderBigInt,        // bidder address (raw BigInt)
+    contractBigInt       // contract address (raw BigInt)
   ];
   return await realPoseidonHash(inputs);
 } 

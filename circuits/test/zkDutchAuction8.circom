@@ -3,4 +3,4 @@ pragma circom 2.0.0;
 
 include "../zkDutchAuction8.circom";
 
-component main {public[commitments, commitmentContractAddress, makerMinimumPrice, makerMaximumAmount]} = zkDutchAuction(8);
+component main {public[commitments, commitmentContractAddress, makerMinimumPrice, makerMaximumAmount]} = zkDutchAuction8();

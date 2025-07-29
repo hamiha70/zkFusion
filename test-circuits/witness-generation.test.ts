@@ -56,16 +56,25 @@ describe('Circuit Witness Generation - Real Hash Integration', function() {
     try {
       console.log('🔄 Attempting witness generation...');
       
-      // Use Circomkit to test witness generation
-      const circuit = await circomkit.WitnessTester('zkDutchAuction', {
-        file: 'zkDutchAuction',
-        template: 'zkDutchAuction',
-        params: [8], // N=8 for our circuit
-        pubs: ['commitments', 'commitmentContractAddress', 'makerMinimumPrice', 'makerMaximumAmount']
-      });
+      // Use the pre-compiled circuit files directly
+      const wasmPath = path.join(process.cwd(), 'circuits/zkDutchAuction8_js/zkDutchAuction8.wasm');
+      const witnessCalculatorPath = path.join(process.cwd(), 'circuits/zkDutchAuction8_js/witness_calculator.js');
+      
+      if (!fs.existsSync(wasmPath)) {
+        throw new Error(`Compiled WASM file not found: ${wasmPath}`);
+      }
+      
+      // Import the witness calculator builder
+      const builder = await import(witnessCalculatorPath);
+      
+      // Load the WASM file
+      const wasmBuffer = fs.readFileSync(wasmPath);
+      
+      // Create witness calculator
+      const witnessCalculator = await builder.default(wasmBuffer);
       
       // Calculate witness
-      const witness = await circuit.calculateWitness(circuitInputs);
+      const witness = await witnessCalculator.calculateWitness(circuitInputs);
       
       console.log('✅ Witness generation successful!');
       console.log(`📊 Witness length: ${witness.length}`);
@@ -138,14 +147,20 @@ describe('Circuit Witness Generation - Real Hash Integration', function() {
     
     // 4. Test witness generation (this validates the circuit logic)
     try {
-      const circuit = await circomkit.WitnessTester('zkDutchAuction', {
-        file: 'zkDutchAuction',
-        template: 'zkDutchAuction',
-        params: [8],
-        pubs: ['commitments', 'commitmentContractAddress', 'makerMinimumPrice', 'makerMaximumAmount']
-      });
+      // Use the pre-compiled circuit files directly
+      const wasmPath = path.join(process.cwd(), 'circuits/zkDutchAuction8_js/zkDutchAuction8.wasm');
+      const witnessCalculatorPath = path.join(process.cwd(), 'circuits/zkDutchAuction8_js/witness_calculator.js');
       
-      const witness = await circuit.calculateWitness(circuitInputs);
+      // Import the witness calculator builder
+      const builder = await import(witnessCalculatorPath);
+      
+      // Load the WASM file
+      const wasmBuffer = fs.readFileSync(wasmPath);
+      
+      // Create witness calculator
+      const witnessCalculator = await builder.default(wasmBuffer);
+      
+      const witness = await witnessCalculator.calculateWitness(circuitInputs);
       
       console.log('✅ Circuit witness generated successfully');
       console.log('✅ JavaScript ↔ Circuit parity validated');
@@ -186,15 +201,21 @@ describe('Circuit Witness Generation - Real Hash Integration', function() {
     };
     
     try {
-      const circuit = await circomkit.WitnessTester('zkDutchAuction', {
-        file: 'zkDutchAuction', 
-        template: 'zkDutchAuction',
-        params: [8],
-        pubs: ['commitments', 'commitmentContractAddress', 'makerMinimumPrice', 'makerMaximumAmount']
-      });
+      // Use the pre-compiled circuit files directly
+      const wasmPath = path.join(process.cwd(), 'circuits/zkDutchAuction8_js/zkDutchAuction8.wasm');
+      const witnessCalculatorPath = path.join(process.cwd(), 'circuits/zkDutchAuction8_js/witness_calculator.js');
+      
+      // Import the witness calculator builder
+      const builder = await import(witnessCalculatorPath);
+      
+      // Load the WASM file
+      const wasmBuffer = fs.readFileSync(wasmPath);
+      
+      // Create witness calculator
+      const witnessCalculator = await builder.default(wasmBuffer);
       
       // This should fail due to invalid commitment hash
-      await circuit.calculateWitness(invalidInputs);
+      await witnessCalculator.calculateWitness(invalidInputs);
       
       // If we reach here, the circuit didn't catch the constraint violation
       throw new Error('Circuit should have rejected invalid inputs');

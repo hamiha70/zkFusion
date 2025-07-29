@@ -1,22 +1,20 @@
 /**
- * ZK Circuit Input Generator - Updated to use Validated Auction Logic
+ * Circuit Input Generator - N=8 zkFusion Circuit
  * 
- * This module generates inputs for the zkDutchAuction circuit using the
- * validated auction logic from auction-simulator.ts to ensure consistency.
+ * Generates properly formatted inputs for the zkDutchAuction circuit using
+ * the validated auction simulation logic.
  */
 
 import * as fs from 'fs';
 import * as path from 'path';
 
 // Import validated auction logic
-import { 
+import {
   simulateAuction,
   generateSortingArrays,
-  generateWinnerBits,
-  type Bid,
-  type AuctionConstraints,
-  type AuctionResult
+  generateWinnerBits
 } from './auction-simulator';
+import type { Bid, AuctionConstraints, AuctionResult } from './types';
 
 import { generateCommitment } from './hash-utils';
 import { realPoseidonHash } from './hash-utils';

@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "ZK-powered Dutch auctions for fast, private, provable intent settlement",
   "main": "index.js",
+  "type": "commonjs",
   "scripts": {
     "compile": "hardhat compile",
     "test": "hardhat test",
@@ -28,6 +29,10 @@
     "lint": "solhint 'contracts/**/*.sol'",
     "format": "prettier --write 'contracts/**/*.sol' 'scripts/**/*.js' 'test/**/*.js'",
     "external-docs:setup": "chmod +x scripts/external_docs_creation/setup-all-docs.sh && ./scripts/external_docs_creation/setup-all-docs.sh",
+    "ts:build": "tsc",
+    "ts:watch": "tsc --watch",
+    "ts:clean": "rm -rf dist",
+    "test:ts": "npx mocha test-circuits/**/*.ts --require ts-node/register --timeout 60000",
     "external-docs:update": "cd docs_external && find . -name '.git' -type d -execdir git pull \\;",
     "external-docs:clean": "rm -rf docs_external",
     "external-docs:high-priority": "chmod +x scripts/external_docs_creation/clone-high-priority-docs.sh && ./scripts/external_docs_creation/clone-high-priority-docs.sh",

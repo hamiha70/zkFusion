@@ -25,6 +25,7 @@
   },
   "include": [
     "test-circuits/**/*",
+    "circuits/utils/**/*.ts",
     "circuits/utils/**/*.js"
   ],
   "exclude": [

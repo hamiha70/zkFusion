@@ -5,7 +5,7 @@
  * Currently uses mock implementation - will be replaced with real Poseidon later.
  */
 
-import type { Bid } from './auction-simulator';
+import type { Bid } from './types';
 
 /**
  * Mock Poseidon(4) hash calculation

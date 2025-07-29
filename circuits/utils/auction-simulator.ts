@@ -10,27 +10,16 @@
  * - Future auction runner implementations
  */
 
-// Types for auction data structures
-export interface Bid {
-  price: bigint;
-  amount: bigint;
-  bidderAddress: string;
-  originalIndex: number;
-}
-
-export interface AuctionConstraints {
-  makerMinimumPrice: bigint;
-  makerMaximumAmount: bigint;
-  commitmentContractAddress: string;
-}
-
-export interface AuctionResult {
-  winners: Bid[];
-  totalFill: bigint;
-  weightedAvgPrice: bigint;
-  numWinners: number;
-  winnerBitmask: number;
-}
+import { 
+  Bid, 
+  AuctionConstraints, 
+  AuctionResult, 
+  FieldElement,
+  BN254_PRIME,
+  isFieldElement,
+  FieldElementError,
+  CIRCUIT_CONFIG
+} from './types';
 
 /**
  * Simulate the zkFusion auction algorithm
@@ -46,7 +35,7 @@ export interface AuctionResult {
  * @returns Auction results with winners and statistics
  */
 export function simulateAuction(bids: Bid[], constraints: AuctionConstraints): AuctionResult {
-  const N = 8; // Fixed circuit size for zkFusion
+  const N = CIRCUIT_CONFIG.N_MAX_BIDS; // Fixed circuit size for zkFusion
   
   // Pad bids to N elements with null bids
   const paddedBids: Bid[] = [...bids];
@@ -103,9 +92,11 @@ export function simulateAuction(bids: Bid[], constraints: AuctionConstraints): A
   return {
     winners,
     totalFill,
+    totalValue,
     weightedAvgPrice,
     numWinners: winners.length,
-    winnerBitmask
+    winnerBitmask,
+    winnerBits: generateWinnerBits(winnerBitmask)
   };
 }
 

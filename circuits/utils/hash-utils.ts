@@ -61,13 +61,64 @@ export function generateCommitments(bids: Bid[], contractAddress: string): bigin
 }
 
 /**
- * TODO: Replace with real Poseidon implementation
- * 
- * When we integrate with circomlibjs, this function will be replaced:
- * 
- * import { poseidon } from 'circomlibjs';
- * 
- * export function realPoseidonHash(inputs: bigint[]): bigint {
- *   return poseidon(inputs);
- * }
- */ 
+ * Real Poseidon hash implementation using circomlibjs
+ */
+// @ts-ignore - circomlibjs doesn't have TypeScript declarations
+import { buildPoseidon } from 'circomlibjs';
+
+let poseidonInstance: any = null;
+
+async function getPoseidon() {
+  if (!poseidonInstance) {
+    poseidonInstance = await buildPoseidon();
+  }
+  return poseidonInstance;
+}
+
+export async function realPoseidonHash(inputs: bigint[]): Promise<bigint> {
+  const poseidon = await getPoseidon();
+  const result = poseidon(inputs);
+  
+  // CRITICAL: circomlibjs Poseidon returns the field element in a specific format
+  // Based on research: we need to extract the single field element properly
+  if (typeof result === 'bigint') {
+    return result;
+  } else if (Array.isArray(result)) {
+    // Result is an array - convert to single field element using big-endian interpretation
+    let value = 0n;
+    for (let i = 0; i < result.length; i++) {
+      value = (value * 256n) + BigInt(result[i]);
+    }
+    return value;
+  } else if (result && result.toString) {
+    const str = result.toString();
+    if (str.includes(',')) {
+      // Parse comma-separated field element representation
+      // This is the internal representation - convert to single BigInt
+      const bytes = str.split(',').map((s: string) => parseInt(s.trim()));
+      let value = 0n;
+      for (let i = 0; i < bytes.length; i++) {
+        value = (value * 256n) + BigInt(bytes[i]);
+      }
+      return value;
+    }
+    return BigInt(str);
+  } else {
+    throw new Error(`Unexpected Poseidon result format: ${typeof result}, value: ${result}`);
+  }
+}
+
+/**
+ * Generate commitment hash using real Poseidon(4)
+ */
+export async function generateCommitmentReal(bid: Bid, contractAddress: string): Promise<bigint> {
+  // Use the same address conversion as the circuit
+  const contractBigInt = BigInt('0x' + contractAddress.replace('0x', ''));
+  const inputs = [
+    bid.price,
+    bid.amount,
+    contractBigInt, // Convert address to bigint
+    contractBigInt  // Contract address for uniqueness
+  ];
+  return await realPoseidonHash(inputs);
+} 

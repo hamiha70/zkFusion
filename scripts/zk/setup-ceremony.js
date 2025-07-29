@@ -42,8 +42,8 @@ async function setupCeremony() {
       throw new Error(
         'No powers of tau file found. Please run: chmod +x scripts/zk/setup-ptau.sh && ./scripts/zk/setup-ptau.sh 8'
       );
-    }
-    
+      }
+      
     spinner.text = `Using powers of tau file: ${ptauFile}`;
     console.log(chalk.blue(`\n📋 Using ptau file: ${ptauFile}`));
 

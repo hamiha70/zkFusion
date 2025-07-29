@@ -145,26 +145,23 @@ export async function generateCircuitInputs(
   console.log(`📊 Auction Results: ${auctionResult.numWinners} winners, ${auctionResult.totalFill} total fill, bitmask: ${auctionResult.winnerBitmask}`);
 
   return {
-    // Private inputs - bid data (8 elements each)
+    // Private inputs - bid data (24 elements total)
     bidPrices,
     bidAmounts,
     bidderAddresses,
     
-    // Private inputs - commitments (8 elements)
-    commitments: formattedCommitments,
-    
-    // Private inputs - constraints (3 elements)
-    commitmentContractAddress: formattedContractAddress,
-    makerMinimumPrice: formattedMinPrice,
-    makerMaximumAmount: formattedMaxAmount,
-    
-    // Private inputs - sorting arrays (8 elements each)
+    // Private inputs - sorting arrays (32 elements total)
     sortedPrices: formattedSortedPrices,
     sortedAmounts: formattedSortedAmounts,
     sortedIndices: formattedSortedIndices,
+    winnerBits: formattedWinnerBits,
     
-    // Private inputs - winner bits (8 elements)
-    winnerBits: formattedWinnerBits
+    // Public inputs - commitments and constraints (11 elements total)
+    // These will be revealed in the ZK proof
+    commitments: formattedCommitments,
+    commitmentContractAddress: formattedContractAddress,
+    makerMinimumPrice: formattedMinPrice,
+    makerMaximumAmount: formattedMaxAmount
   };
 }
 

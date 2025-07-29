@@ -27,6 +27,9 @@ import {
   addressToFieldElement 
 } from './mock-poseidon';
 
+// Import existing JavaScript utilities (TODO: Convert to TypeScript)
+const { hashBid, isValidFieldElement } = require('./poseidon');
+
 /**
  * Convert JavaScript bid format to TypeScript Bid interface
  */

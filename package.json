@@ -32,7 +32,7 @@
     "ts:build": "tsc",
     "ts:watch": "tsc --watch",
     "ts:clean": "rm -rf dist",
-    "test:ts": "npx mocha test-circuits/**/*.ts --require ts-node/register --timeout 60000",
+    "test:ts": "npx mocha test-circuits/**/*.ts --require ts-node/register --timeout 60000 --require tsconfig-paths/register",
     "external-docs:update": "cd docs_external && find . -name '.git' -type d -execdir git pull \\;",
     "external-docs:clean": "rm -rf docs_external",
     "external-docs:high-priority": "chmod +x scripts/external_docs_creation/clone-high-priority-docs.sh && ./scripts/external_docs_creation/clone-high-priority-docs.sh",

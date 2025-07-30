@@ -1225,45 +1225,92 @@ This analysis provides a clear, economically justified path forward for zkFusion
 
 ---
 
-## 🚨 **CRITICAL BLOCKER DISCOVERED - POSEIDON HASH INCOMPATIBILITY**
+## CRITICAL BUG ANALYSIS: Winner Bitmask Ordering 🚨
 
-**Date**: January 2025  
-**Status**: 🔴 **SYSTEM BLOCKING ISSUE**  
-**Impact**: Complete ZK proof generation failure  
+**Date:** July 2025  
+**Status:** Root Cause Identified - Critical Fix Required
 
-### **Root Cause Identified**
-**Poseidon hash implementation mismatch** between:
-- **Circuit**: `circomlib/circuits/poseidon.circom` (original Poseidon with specific constants)
-- **JavaScript**: `circomlibjs@0.1.7` (different implementation/variant)
+### **Bug Description:**
+The circuit calculates `winnerBitmask` in **sorted bid order**, but the commitment contract expects it in **original bidder order**.
 
-**Result**: Same inputs produce different hash outputs, causing `Assert Failed` at line 97 in circuit.
+### **Technical Details:**
 
-### **Comprehensive Analysis**
-📋 **Full documentation**: [`docs/PoseidonHashComplications.md`](./PoseidonHashComplications.md)
+**Current Circuit Logic:**
+```circom
+// winnerBits[i] = 1 if sorted position i wins
+// winnerBitmask encodes winners in sorted order
+bitmaskSum[i+1] <== bitmaskSum[i] + winnerBits[i] * (2 ** i);
+```
 
-**Key Findings**:
-- ✅ Address conversion issue resolved (was contributing factor)
-- ❌ Field element bounds not the issue (even tiny values fail)
-- 🎯 **Core Issue**: Different Poseidon implementations using different constants/parameters
+**Expected Contract Logic:**
+- Bitmask should indicate which **original bidders** won
+- Position i in bitmask = original bidder i won/lost
 
-### **Solution Options**
-1. **Option A**: Compatible JavaScript Poseidon (4-8 hours) ⭐ **RECOMMENDED**
-2. **Option B**: Switch to Poseidon2 (6-10 hours) 🔄 **ALTERNATIVE**  
-3. **Option C**: Mock implementation for hackathon (30 minutes) 🎭 **IMMEDIATE FALLBACK**
-4. **Option D**: Extract circuit constants (8-12 hours) 🔧 **DEEP FIX**
+**Example of the Problem:**
+- Original bids: [A=600, B=1000, C=800]
+- Sorted: [B, C, A] → `sortedIndices = [1,2,0]`  
+- Winners: B,C → `isWinner = [1,1,0]`
+- Result: `bitmask = 1×2¹ + 1×2² + 0×2⁰ = 6 = 0b110` ✅
 
-### **Immediate Action Plan**
-**Phase 1**: Implement mock Poseidon for hackathon demo (allows progress)  
-**Phase 2**: Research and implement proper solution post-hackathon  
-**Phase 3**: Replace mock with cryptographically secure implementation  
+### **Impact:**
+- **Line 158 assertion failure:** `bitValidator[i].out === 1`
+- Circuit validates `winnerBits` against its own calculation (sorted order)
+- Test provides `winnerBits` expecting original order
+- **Fundamental mismatch in ordering convention**
 
-### **Next Steps**
-1. **Document issue** ✅ **COMPLETED** - Comprehensive analysis in `PoseidonHashComplications.md`
-2. **Commit current progress** - Preserve investigation work
-3. **Implement TypeScript migration** - Better tooling for debugging and implementation
-4. **Choose solution approach** - Based on time constraints and requirements
+### **Solution Options:**
 
-**⚠️ CRITICAL**: Mock implementation is NOT cryptographically secure and must be replaced before production deployment. 
+**✅ SELECTED SOLUTION: Fix Circuit with Proper Mapping**
+
+**Correct Bitmask Formula:**
+```
+initialize bitmask to 0
+for i from 0 to N-1:
+    bitmask += isWinner[i] * 2^sortedIndices[i]
+```
+
+**Key Insight:** Map from sorted positions back to original bidder positions using `sortedIndices[i]`.
+
+**Circom Implementation Strategy:**
+```circom
+// Use bit shift operators (much cleaner!)
+signal bitmaskContrib[N];
+signal bitmaskSum[N+1];
+bitmaskSum[0] <== 0;
+
+for (var i = 0; i < N; i++) {
+    // Use left shift: 1 << sortedIndices[i] = 2^sortedIndices[i]
+    bitmaskContrib[i] <== isWinner[i] * (1 << sortedIndices[i]);
+    bitmaskSum[i+1] <== bitmaskSum[i] + bitmaskContrib[i];
+}
+
+winnerBitmask <== bitmaskSum[N];
+```
+
+**Example Verification:**
+- Original: [A=600, B=1000, C=800] → positions [0,1,2]
+- Sorted: [B, C, A] → `sortedIndices = [1,2,0]`  
+- Winners: B,C → `isWinner = [1,1,0]`
+- Result: `bitmask = 1×2¹ + 1×2² + 0×2⁰ = 6 = 0b110` ✅
+
+**~~Option 2: Fix Contract Interface~~**
+**~~Option 3: Dual Output~~**
+
+### **Additional Issues Identified:**
+
+**1. Naming Confusion:**
+- `weightedAvgPrice` output actually contains `totalValue`
+- Comment is correct, variable name is misleading
+- Could cause integration errors
+
+**2. SortingVerifier Validation:**
+- Not independently tested in isolation
+- Medium confidence in correctness
+- Should validate edge cases (equal prices, zeros)
+
+### **Priority:** **CRITICAL** - Blocks end-to-end functionality
+
+--- 
 
 ## CIRCUIT EFFICIENCY OPTIMIZATION OPPORTUNITY 🚀
 

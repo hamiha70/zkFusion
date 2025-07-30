@@ -5,6 +5,38 @@
 
 ---
 
+## 🏗️ **CIRCUIT ARCHITECTURE UNDERSTANDING**
+
+### **Critical: Template vs Wrapper Files**
+
+Before debugging, it's essential to understand zkFusion's two-file circuit architecture:
+
+#### **File Structure**
+- **`zkDutchAuction.circom`** (168 lines) - Main template with all logic
+- **`zkDutchAuction8.circom`** (6 lines) - Wrapper that instantiates template with N=8
+
+#### **Error Message Translation**
+When we see: `Error in template zkDutchAuction_80 line: 97`
+
+**Decoded**:
+- `zkDutchAuction_80` = Auto-generated C++ function name for the N=8 circuit
+- `line: 97` = Line 97 in the **main template** (`zkDutchAuction.circom`)
+- **NOT** line 97 in the wrapper file
+
+#### **Debugging Implications**
+- **Edit/debug**: Always work with `zkDutchAuction.circom` (the template)
+- **Compile**: Build system targets `zkDutchAuction8.circom` (the wrapper)
+- **Line numbers**: Error references refer to the template file
+- **Logic fixes**: All business logic changes go in the template
+
+#### **Build Flow for Debugging**
+1. Edit `zkDutchAuction.circom` (template) ← **Our changes here**
+2. Compile `zkDutchAuction8.circom` (wrapper) ← **Build system does this**
+3. Generate `zkDutchAuction8.wasm` ← **Used for witness generation**
+4. Error reports reference template line numbers ← **Debug using template**
+
+---
+
 ## 🔍 **FAILURE LOCATION ANALYSIS**
 
 ### **What We Know About the Error**

@@ -1,6 +1,6 @@
 # zkFusion Circom Circuit Design & Implementation
 
-**Last Updated**: January 2025  
+**Last Updated**: July 2025  
 **Status**: ✅ **TESTING SUCCESSFUL** - All Tests Passing  
 **Circuit Complexity**: 1,804 non-linear constraints, 1,615 linear constraints  
 **Test Results**: 7/7 tests passing ✅
@@ -25,6 +25,46 @@ Instead of implementing expensive O(n log n) sorting in ZK, we use:
 ---
 
 ## 🏗️ **CIRCUIT ARCHITECTURE**
+
+### **Template vs Wrapper Architecture**
+
+zkFusion uses a **two-file architecture** for maximum flexibility and clarity:
+
+#### **1. `zkDutchAuction.circom` - The Template (Generic Implementation)**
+- **Purpose**: Defines the reusable template for the auction circuit
+- **Size**: 168 lines of actual circuit logic
+- **Parameterized**: `template zkDutchAuction(N)` - can work with any N
+- **Contains**: All business logic (sorting verification, Poseidon hashing, auction constraints)
+- **Critical fixes**: 252-bit comparators for large field elements
+- **Reusable**: Could instantiate with N=4, N=16, N=32, etc.
+
+**Think of it as**: A **class definition** in programming - defines the structure but doesn't create an instance
+
+#### **2. `zkDutchAuction8.circom` - The Wrapper (Specific Instance)**
+- **Purpose**: Creates a specific instance of the template with N=8
+- **Size**: Only 6 lines - just instantiation code
+- **Includes**: `include "zkDutchAuction.circom"`
+- **Creates**: `component main = zkDutchAuction(8)`
+- **Fixed parameter**: Hard-coded to N=8 (8 bid slots)
+- **Compilation target**: This is what gets compiled by build scripts
+
+**Think of it as**: An **object instantiation** in programming - creates an actual instance with specific parameters
+
+#### **Build Process Flow**
+1. **Circom compiler** targets `zkDutchAuction8.circom`
+2. **Which includes** `zkDutchAuction.circom` 
+3. **Which instantiates** the template with N=8
+4. **Generates**: `zkDutchAuction8.r1cs`, `zkDutchAuction8.wasm`, etc.
+
+#### **File Naming Convention**
+- `zkDutchAuction.circom` = Template definition
+- `zkDutchAuction8.circom` = N=8 instance (the "8" indicates the parameter)
+- `zkDutchAuction8.r1cs` = Compiled output for N=8 instance
+
+#### **Development Workflow**
+- **Edit circuit logic** → Edit `zkDutchAuction.circom` (the template)
+- **Change bid count** → Create new wrapper (e.g., `zkDutchAuction16.circom`)
+- **Compile** → Compile the wrapper (`zkDutchAuction8.circom`)
 
 ### **Input Signals**
 

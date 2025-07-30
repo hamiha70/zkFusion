@@ -5,10 +5,10 @@
  * Tests sorting verification, auction logic, and security properties.
  */
 
-import { describe, it, before } from 'mocha';
-import { expect } from 'chai';
-import { Circomkit } from 'circomkit';
-import type { CircuitInputs, CircuitOutputs } from './types';
+// import { describe, it, before } = require('mocha');
+const { expect } = require('chai');
+const { Circomkit } = require('circomkit');
+const type { CircuitInputs, CircuitOutputs } = require('./types');
 
 // Helper function to generate proper Poseidon hashes for test inputs
 async function generateTestCommitments(bidPrices: bigint[], bidAmounts: bigint[], nonces: bigint[]): Promise<bigint[]> {

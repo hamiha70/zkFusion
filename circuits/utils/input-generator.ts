@@ -8,32 +8,31 @@
  * Must be replaced with proper Poseidon before production.
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
+const fs = require('fs');
+const path = require('path');
 
 // Import validated auction logic
-import {
+const {
   simulateAuction,
   generateSortingArrays,
   generateWinnerBits
-} from './auction-simulator';
-import type { Bid, AuctionConstraints, AuctionResult } from './types';
+} = require('./auction-simulator');
 
 // Import mock Poseidon for immediate unblocking
-import { 
+const { 
   generateMockCommitment, 
   generateMockNullCommitment,
   formatFieldElement,
   addressToFieldElement 
-} from './mock-poseidon';
+} = require('./mock-poseidon');
 
 // Import existing JavaScript utilities (TODO: Convert to TypeScript)
-const { hashBid, isValidFieldElement } = require('./poseidon');
+// const { hashBid, isValidFieldElement } = require('./poseidon');
 
 /**
  * Convert JavaScript bid format to TypeScript Bid interface
  */
-function convertToBid(jsBid: any, index: number): Bid {
+function convertToBid(jsBid: any, index: number): any {
   return {
     price: BigInt(jsBid.price.toString()),
     amount: BigInt(jsBid.amount.toString()),
@@ -51,7 +50,7 @@ function convertToBid(jsBid: any, index: number): Bid {
  * @param commitmentContractAddress Address of commitment contract
  * @returns Circuit inputs object with all 75 required inputs
  */
-export async function generateCircuitInputs(
+async function generateCircuitInputs(
   bids: any[], 
   commitments: any[], 
   makerMinimumPrice: bigint | string | number,
@@ -68,20 +67,20 @@ export async function generateCircuitInputs(
   // Note: commitments can be less than N - we'll pad them later
 
   // Convert to TypeScript Bid format
-  const typedBids: Bid[] = bids.map((bid, index) => convertToBid(bid, index));
+  const typedBids: any[] = bids.map((bid, index) => convertToBid(bid, index));
 
   // Create auction constraints
-  const constraints: AuctionConstraints = {
+  const constraints: any = {
     makerMinimumPrice: BigInt(makerMinimumPrice.toString()),
     makerMaximumAmount: BigInt(makerMaximumAmount.toString()),
     commitmentContractAddress
   };
 
   // Use validated auction logic to simulate results
-  const auctionResult: AuctionResult = simulateAuction(typedBids, constraints);
+  const auctionResult: any = simulateAuction(typedBids, constraints);
 
   // Pad bids to N elements with null bids (using validated logic)
-  const paddedBids: Bid[] = [...typedBids];
+  const paddedBids: any[] = [...typedBids];
   while (paddedBids.length < N) {
     paddedBids.push({
       price: 0n,
@@ -181,7 +180,7 @@ export async function generateCircuitInputs(
  * @param auctionResults Results from validated simulateAuction
  * @returns Expected public outputs [totalFill, weightedAvgPrice, numWinners, winnerBitmask]
  */
-export function generateExpectedOutputs(auctionResults: AuctionResult): string[] {
+function generateExpectedOutputs(auctionResults: any): string[] {
   return [
     auctionResults.totalFill.toString(),
     auctionResults.weightedAvgPrice.toString(),
@@ -193,7 +192,7 @@ export function generateExpectedOutputs(auctionResults: AuctionResult): string[]
 /**
  * Save circuit inputs to JSON file
  */
-export function saveInputsToFile(inputs: any, filename: string = 'input.json'): void {
+function saveInputsToFile(inputs: any, filename: string = 'input.json'): void {
   const inputsDir = path.join(__dirname, '../inputs');
   if (!fs.existsSync(inputsDir)) {
     fs.mkdirSync(inputsDir, { recursive: true });
@@ -207,7 +206,7 @@ export function saveInputsToFile(inputs: any, filename: string = 'input.json'): 
 /**
  * Load circuit inputs from JSON file
  */
-export function loadInputsFromFile(filename: string = 'input.json'): any {
+function loadInputsFromFile(filename: string = 'input.json'): any {
   const filepath = path.join(__dirname, '../inputs', filename);
   if (!fs.existsSync(filepath)) {
     throw new Error(`Input file not found: ${filepath}`);
@@ -220,7 +219,7 @@ export function loadInputsFromFile(filename: string = 'input.json'): any {
 /**
  * Verify commitments match bid data using validated logic
  */
-export function verifyCommitments(bids: any[], commitments: any[], contractAddress: string): boolean {
+function verifyCommitments(bids: any[], commitments: any[], contractAddress: string): boolean {
   if (bids.length !== commitments.length) {
     console.error(`❌ Bid count (${bids.length}) doesn't match commitment count (${commitments.length})`);
     return false;

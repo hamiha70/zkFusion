@@ -5,12 +5,10 @@
  * We'll compare how JavaScript calculates winners vs how the circuit calculates winners.
  */
 
-import { describe, it } from 'mocha';
-import { expect } from 'chai';
-import { generateCircuitInputs } from '../circuits/utils/input-generator';
-import { simulateAuction } from '../circuits/utils/auction-simulator';
-import type { Bid, AuctionConstraints } from '../circuits/utils/types';
-import { generateCommitmentReal } from '../circuits/utils/hash-utils';
+const { expect } = require('chai');
+const { generateCircuitInputs } = require('../circuits/utils/input-generator');
+const { simulateAuction } = require('../circuits/utils/auction-simulator');
+const { generateCommitmentReal } = require('../circuits/utils/hash-utils');
 
 describe('Debug Circuit Inputs - Winner Logic Comparison', function() {
   
@@ -18,7 +16,7 @@ describe('Debug Circuit Inputs - Winner Logic Comparison', function() {
     console.log('🔍 Debugging winner calculation mismatch...');
     
     // Use the same test case that's failing
-    const testBids: Bid[] = [
+    const testBids = [
       { 
         price: 2000000000000000000n, 
         amount: 50000000000000000000n, 
@@ -33,7 +31,7 @@ describe('Debug Circuit Inputs - Winner Logic Comparison', function() {
       }
     ];
     
-    const constraints: AuctionConstraints = {
+    const constraints = {
       makerMinimumPrice: 1500000000000000000n,
       makerMaximumAmount: 100000000000000000000n,
       commitmentContractAddress: '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd'
@@ -79,8 +77,8 @@ describe('Debug Circuit Inputs - Winner Logic Comparison', function() {
     console.log('🔍 Manual Circuit Winner Calculation:');
     
     const N = 8;
-    const sortedPrices = circuitInputs.sortedPrices.map((p: string) => BigInt(p));
-    const sortedAmounts = circuitInputs.sortedAmounts.map((a: string) => BigInt(a));
+    const sortedPrices = circuitInputs.sortedPrices.map((p) => BigInt(p));
+    const sortedAmounts = circuitInputs.sortedAmounts.map((a) => BigInt(a));
     const minPrice = BigInt(circuitInputs.makerMinimumPrice);
     const maxAmount = BigInt(circuitInputs.makerMaximumAmount);
     
@@ -113,7 +111,7 @@ describe('Debug Circuit Inputs - Winner Logic Comparison', function() {
     console.log('📊 JavaScript Winner Bits:', circuitInputs.winnerBits);
     
     // 5. Compare results
-    const jsWinnerBits = circuitInputs.winnerBits.map((bit: string) => parseInt(bit));
+    const jsWinnerBits = circuitInputs.winnerBits.map((bit) => parseInt(bit));
     const mismatch = [];
     
     for (let i = 0; i < N; i++) {
@@ -157,7 +155,7 @@ describe('Debug Circuit Inputs - Winner Logic Comparison', function() {
     console.log('🔍 Debugging exact constraint validation at line 97...');
     
     // Use the same test case
-    const testBids: Bid[] = [
+    const testBids = [
       { 
         price: 2000000000000000000n, 
         amount: 50000000000000000000n, 
@@ -172,7 +170,7 @@ describe('Debug Circuit Inputs - Winner Logic Comparison', function() {
       }
     ];
     
-    const constraints: AuctionConstraints = {
+    const constraints = {
       makerMinimumPrice: 1500000000000000000n,
       makerMaximumAmount: 100000000000000000000n,
       commitmentContractAddress: '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd'
@@ -203,11 +201,11 @@ describe('Debug Circuit Inputs - Winner Logic Comparison', function() {
     
     // Check each winner bit against expected isWinner value
     const N = 8;
-    const sortedPrices = circuitInputs.sortedPrices.map((p: string) => BigInt(p));
-    const sortedAmounts = circuitInputs.sortedAmounts.map((a: string) => BigInt(a));
+    const sortedPrices = circuitInputs.sortedPrices.map((p) => BigInt(p));
+    const sortedAmounts = circuitInputs.sortedAmounts.map((a) => BigInt(a));
     const minPrice = BigInt(circuitInputs.makerMinimumPrice);
     const maxAmount = BigInt(circuitInputs.makerMaximumAmount);
-    const winnerBits = circuitInputs.winnerBits.map((bit: string) => parseInt(bit));
+    const winnerBits = circuitInputs.winnerBits.map((bit) => parseInt(bit));
     
     let cumulativeFill = 0n;
     const constraintViolations = [];
@@ -260,7 +258,7 @@ describe('Debug Circuit Inputs - Winner Logic Comparison', function() {
     
     // Check if there are any other potential issues
     console.log('🔍 Additional checks:');
-    console.log('  - All field elements valid:', circuitInputs.bidPrices.every((p: string) => BigInt(p) >= 0n));
+    console.log('  - All field elements valid:', circuitInputs.bidPrices.every((p) => BigInt(p) >= 0n));
     console.log('  - Commitments match expectations:', circuitInputs.commitments.length === 8);
     console.log('  - Sorting arrays valid:', circuitInputs.sortedPrices.length === 8);
     
@@ -271,7 +269,7 @@ describe('Debug Circuit Inputs - Winner Logic Comparison', function() {
     console.log('🔍 Isolating the exact failing constraint...');
     
     // Use the same test case
-    const testBids: Bid[] = [
+    const testBids = [
       { 
         price: 2000000000000000000n, 
         amount: 50000000000000000000n, 
@@ -286,7 +284,7 @@ describe('Debug Circuit Inputs - Winner Logic Comparison', function() {
       }
     ];
     
-    const constraints: AuctionConstraints = {
+    const constraints = {
       makerMinimumPrice: 1500000000000000000n,
       makerMaximumAmount: 100000000000000000000n,
       commitmentContractAddress: '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd'
@@ -450,7 +448,7 @@ describe('Debug Circuit Inputs - Winner Logic Comparison', function() {
     console.log('🔍 Verifying Poseidon hash compatibility...');
     
     // Use the same test case
-    const testBids: Bid[] = [
+    const testBids = [
       { 
         price: 2000000000000000000n, 
         amount: 50000000000000000000n, 
@@ -465,7 +463,7 @@ describe('Debug Circuit Inputs - Winner Logic Comparison', function() {
       }
     ];
     
-    const constraints: AuctionConstraints = {
+    const constraints = {
       makerMinimumPrice: 1500000000000000000n,
       makerMaximumAmount: 100000000000000000000n,
       commitmentContractAddress: '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd'
@@ -493,7 +491,7 @@ describe('Debug Circuit Inputs - Winner Logic Comparison', function() {
     console.log('🔍 Testing Poseidon hash compatibility...');
     
     // Import the real Poseidon function
-    const { realPoseidonHash } = await import('../circuits/utils/hash-utils');
+    const { realPoseidonHash } = require('../circuits/utils/hash-utils');
     
     const hashMismatches = [];
     
@@ -552,7 +550,7 @@ describe('Debug Circuit Inputs - Winner Logic Comparison', function() {
     console.log('🔍 Testing exact constraint logic difference...');
     
     // Use a test case where the constraint difference might matter
-    const testBids: Bid[] = [
+    const testBids = [
       { 
         price: 2000000000000000000n, 
         amount: 100000000000000000000n, // Exactly equal to max amount
@@ -561,7 +559,7 @@ describe('Debug Circuit Inputs - Winner Logic Comparison', function() {
       }
     ];
     
-    const constraints: AuctionConstraints = {
+    const constraints = {
       makerMinimumPrice: 1500000000000000000n,
       makerMaximumAmount: 100000000000000000000n, // Exactly equal to bid amount
       commitmentContractAddress: '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd'
@@ -617,7 +615,7 @@ describe('Debug Circuit Inputs - Winner Logic Comparison', function() {
     console.log('🔍 Testing with minimal inputs to isolate the failing constraint...');
     
     // Use the simplest possible test case - just one bid
-    const testBids: Bid[] = [
+    const testBids = [
       { 
         price: 2000000000000000000n, 
         amount: 50000000000000000000n, 
@@ -626,7 +624,7 @@ describe('Debug Circuit Inputs - Winner Logic Comparison', function() {
       }
     ];
     
-    const constraints: AuctionConstraints = {
+    const constraints = {
       makerMinimumPrice: 1500000000000000000n,
       makerMaximumAmount: 100000000000000000000n,
       commitmentContractAddress: '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd'
@@ -664,7 +662,7 @@ describe('Debug Circuit Inputs - Winner Logic Comparison', function() {
     
     // 1. Test sorting constraint
     console.log('1️⃣ Testing sorting constraint...');
-    const sortedPrices = circuitInputs.sortedPrices.map((p: string) => BigInt(p));
+    const sortedPrices = circuitInputs.sortedPrices.map((p) => BigInt(p));
     let sortingOK = true;
     for (let i = 0; i < 7; i++) {
       if (sortedPrices[i] < sortedPrices[i + 1] && sortedPrices[i + 1] > 0n) {
@@ -676,7 +674,7 @@ describe('Debug Circuit Inputs - Winner Logic Comparison', function() {
     
     // 2. Test winner calculation
     console.log('2️⃣ Testing winner calculation...');
-    const winnerBits = circuitInputs.winnerBits.map((bit: string) => parseInt(bit));
+    const winnerBits = circuitInputs.winnerBits.map((bit) => parseInt(bit));
     const minPrice = BigInt(circuitInputs.makerMinimumPrice);
     const maxAmount = BigInt(circuitInputs.makerMaximumAmount);
     
@@ -734,7 +732,7 @@ describe('Debug Circuit Inputs - Winner Logic Comparison', function() {
     
     // 4. Test Poseidon hash verification
     console.log('4️⃣ Testing Poseidon hash verification...');
-    const { realPoseidonHash } = await import('../circuits/utils/hash-utils');
+    const { realPoseidonHash } = require('../circuits/utils/hash-utils');
     let poseidonOK = true;
     
     for (let i = 0; i < 8; i++) {

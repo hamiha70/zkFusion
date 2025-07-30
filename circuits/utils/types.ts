@@ -5,15 +5,15 @@
  */
 
 // BN254 Field Element - ensures values are within the correct range
-export type FieldElement = bigint;
+type FieldElement = bigint;
 
 // BN254 prime field constant
-export const BN254_PRIME = 21888242871839275222246405745257275088548364400416034343698204186575808495617n;
+const BN254_PRIME = 21888242871839275222246405745257275088548364400416034343698204186575808495617n;
 
 /**
  * Bid structure for auction simulation
  */
-export interface Bid {
+interface Bid {
   price: bigint;
   amount: bigint;
   bidderAddress: string;
@@ -23,7 +23,7 @@ export interface Bid {
 /**
  * Auction constraints that define the rules
  */
-export interface AuctionConstraints {
+interface AuctionConstraints {
   makerMinimumPrice: bigint;
   makerMaximumAmount: bigint;
   commitmentContractAddress: string;
@@ -32,7 +32,7 @@ export interface AuctionConstraints {
 /**
  * Result of auction simulation
  */
-export interface AuctionResult {
+interface AuctionResult {
   winners: Bid[];
   totalFill: bigint;
   totalValue: bigint;
@@ -45,7 +45,7 @@ export interface AuctionResult {
 /**
  * Circuit input structure for N=8 circuit
  */
-export interface CircuitInputs {
+interface CircuitInputs {
   // Private inputs (revealed bids)
   bidPrices: string[];        // [8] - prices of bids
   bidAmounts: string[];       // [8] - amounts of bids
@@ -65,7 +65,7 @@ export interface CircuitInputs {
 /**
  * Circuit outputs structure
  */
-export interface CircuitOutputs {
+interface CircuitOutputs {
   totalFill: bigint;          // Total amount of tokens filled
   weightedAvgPrice: bigint;   // Actually total value (contract calculates price)
   numWinners: bigint;         // Number of winning bids
@@ -75,7 +75,7 @@ export interface CircuitOutputs {
 /**
  * Witness calculation result
  */
-export interface WitnessResult {
+interface WitnessResult {
   witness: bigint[];
   publicSignals: bigint[];
 }
@@ -83,28 +83,28 @@ export interface WitnessResult {
 /**
  * Hash function interface for consistency
  */
-export interface HashFunction {
+interface HashFunction {
   (inputs: bigint[]): Promise<bigint>;
 }
 
 /**
  * Mock hash function type for testing
  */
-export interface MockHashFunction {
+interface MockHashFunction {
   (inputs: bigint[]): bigint;
 }
 
 /**
  * Commitment generation function interface
  */
-export interface CommitmentGenerator {
+interface CommitmentGenerator {
   (bid: Bid, contractAddress: string): Promise<bigint> | bigint;
 }
 
 /**
  * Circuit testing utilities interface
  */
-export interface CircuitTester {
+interface CircuitTester {
   calculateWitness(inputs: CircuitInputs): Promise<bigint[]>;
   expectConstraintPass(inputs: CircuitInputs): Promise<void>;
   expectConstraintFail(inputs: CircuitInputs): Promise<void>;
@@ -113,7 +113,7 @@ export interface CircuitTester {
 /**
  * Poseidon hash configuration
  */
-export interface PoseidonConfig {
+interface PoseidonConfig {
   nInputs: number;
   nRoundsF: number;
   nRoundsP: number;
@@ -124,7 +124,7 @@ export interface PoseidonConfig {
 /**
  * Test case structure for systematic testing
  */
-export interface TestCase {
+interface TestCase {
   name: string;
   description: string;
   inputs: CircuitInputs;
@@ -136,7 +136,7 @@ export interface TestCase {
 /**
  * Validation result for test cases
  */
-export interface ValidationResult {
+interface ValidationResult {
   testName: string;
   passed: boolean;
   actualOutputs?: Partial<CircuitOutputs>;
@@ -147,7 +147,7 @@ export interface ValidationResult {
 /**
  * Circuit compilation result
  */
-export interface CircuitCompilationResult {
+interface CircuitCompilationResult {
   success: boolean;
   circuitPath: string;
   wasmPath: string;
@@ -167,7 +167,7 @@ export interface CircuitCompilationResult {
 /**
  * Trusted setup result
  */
-export interface TrustedSetupResult {
+interface TrustedSetupResult {
   success: boolean;
   zkeyPath: string;
   vkeyPath: string;
@@ -178,7 +178,7 @@ export interface TrustedSetupResult {
 /**
  * Proof generation result
  */
-export interface ProofResult {
+interface ProofResult {
   success: boolean;
   proof: {
     pi_a: [string, string, string];
@@ -192,7 +192,7 @@ export interface ProofResult {
 /**
  * Utility functions type definitions
  */
-export interface CircuitUtils {
+interface CircuitUtils {
   // Hash functions
   mockPoseidonHash: MockHashFunction;
   realPoseidonHash: HashFunction;
@@ -221,32 +221,31 @@ export interface CircuitUtils {
 /**
  * Error types for better error handling
  */
-export class CircuitError extends Error {
-  constructor(
-    message: string,
-    public readonly code: string,
-    public readonly details?: any
-  ) {
+class CircuitError extends Error {
+  code: string;
+  details?: any;
+  
+  constructor(message: string, code: string, details?: any) {
     super(message);
     this.name = 'CircuitError';
+    this.code = code;
+    this.details = details;
   }
 }
 
-export class HashCompatibilityError extends CircuitError {
+class HashCompatibilityError extends CircuitError {
   constructor(message: string, details?: any) {
-    super(message, 'HASH_COMPATIBILITY', details);
-    this.name = 'HashCompatibilityError';
+    super(message, 'HASH_COMPATIBILITY_ERROR', details);
   }
 }
 
-export class FieldElementError extends CircuitError {
+class FieldElementError extends CircuitError {
   constructor(message: string, details?: any) {
-    super(message, 'FIELD_ELEMENT', details);
-    this.name = 'FieldElementError';
+    super(message, 'FIELD_ELEMENT_ERROR', details);
   }
 }
 
-export class WitnessGenerationError extends CircuitError {
+class WitnessGenerationError extends CircuitError {
   constructor(message: string, details?: any) {
     super(message, 'WITNESS_GENERATION', details);
     this.name = 'WitnessGenerationError';
@@ -256,11 +255,11 @@ export class WitnessGenerationError extends CircuitError {
 /**
  * Type guards for runtime type checking
  */
-export const isFieldElement = (value: any): value is FieldElement => {
+const isFieldElement = (value: any): value is FieldElement => {
   return typeof value === 'bigint' && value >= 0n && value < BN254_PRIME;
 };
 
-export const isBid = (value: any): value is Bid => {
+const isBid = (value: any): value is Bid => {
   return (
     typeof value === 'object' &&
     value !== null &&
@@ -271,7 +270,7 @@ export const isBid = (value: any): value is Bid => {
   );
 };
 
-export const isCircuitInputs = (value: any): value is CircuitInputs => {
+const isCircuitInputs = (value: any): value is CircuitInputs => {
   return (
     typeof value === 'object' &&
     value !== null &&
@@ -290,7 +289,7 @@ export const isCircuitInputs = (value: any): value is CircuitInputs => {
 /**
  * Constants for circuit configuration
  */
-export const CIRCUIT_CONFIG = {
+const CIRCUIT_CONFIG = {
   N_MAX_BIDS: 8,
   POSEIDON_INPUTS: 4,
   BN254_PRIME,
@@ -301,9 +300,19 @@ export const CIRCUIT_CONFIG = {
 /**
  * Test configuration
  */
-export const TEST_CONFIG = {
+const TEST_CONFIG = {
   DEFAULT_TIMEOUT: 60000,
   WITNESS_GENERATION_TIMEOUT: 30000,
   PROOF_GENERATION_TIMEOUT: 120000,
   MAX_RETRY_ATTEMPTS: 3,
-} as const; 
+} as const;
+
+// CommonJS exports
+module.exports = {
+  CIRCUIT_CONFIG,
+  BN254_PRIME,
+  CircuitError,
+  HashCompatibilityError,
+  FieldElementError,
+  TEST_CONFIG
+}; 

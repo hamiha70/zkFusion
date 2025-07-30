@@ -5,7 +5,7 @@
  * Currently uses mock implementation - will be replaced with real Poseidon later.
  */
 
-import type { Bid } from './types';
+// import type { Bid } from './types';
 
 /**
  * Mock Poseidon(4) hash calculation
@@ -19,7 +19,7 @@ import type { Bid } from './types';
  * @param contractAddr Commitment contract address
  * @returns Mock hash value as bigint
  */
-export function mockPoseidonHash(
+function mockPoseidonHash(
   price: bigint, 
   amount: bigint, 
   address: string, 
@@ -45,7 +45,7 @@ export function mockPoseidonHash(
  * @param contractAddress Commitment contract address (for replay protection)
  * @returns Commitment hash as bigint
  */
-export function generateCommitment(bid: Bid, contractAddress: string): bigint {
+function generateCommitment(bid: any, contractAddress: string): bigint {
   return mockPoseidonHash(bid.price, bid.amount, bid.bidderAddress, contractAddress);
 }
 
@@ -56,7 +56,7 @@ export function generateCommitment(bid: Bid, contractAddress: string): bigint {
  * @param contractAddress Commitment contract address
  * @returns Array of commitment hashes
  */
-export function generateCommitments(bids: Bid[], contractAddress: string): bigint[] {
+function generateCommitments(bids: any[], contractAddress: string): bigint[] {
   return bids.map(bid => generateCommitment(bid, contractAddress));
 }
 
@@ -64,7 +64,7 @@ export function generateCommitments(bids: Bid[], contractAddress: string): bigin
  * Real Poseidon hash implementation using circomlibjs
  */
 // @ts-ignore - circomlibjs doesn't have TypeScript declarations
-import { buildPoseidon } from 'circomlibjs';
+// // import { buildPoseidon } from 'circomlibjs';
 
 let poseidonInstance: any = null;
 
@@ -75,7 +75,7 @@ async function getPoseidon() {
   return poseidonInstance;
 }
 
-export async function realPoseidonHash(inputs: bigint[]): Promise<bigint> {
+async function realPoseidonHash(inputs: bigint[]): Promise<bigint> {
   const poseidon = await getPoseidon();
   const result = poseidon(inputs);
   
@@ -127,7 +127,7 @@ export async function realPoseidonHash(inputs: bigint[]): Promise<bigint> {
 /**
  * Generate commitment hash using real Poseidon(4) - FIXED TO MATCH CIRCUIT
  */
-export async function generateCommitmentReal(bid: Bid, contractAddress: string): Promise<bigint> {
+async function generateCommitmentReal(bid: any, contractAddress: string): Promise<bigint> {
   // FIXED: Use raw BigInt addresses (no conversion) to match circuit expectations
   const bidderBigInt = BigInt(bid.bidderAddress);
   const contractBigInt = BigInt(contractAddress);
@@ -141,3 +141,12 @@ export async function generateCommitmentReal(bid: Bid, contractAddress: string):
   ];
   return await realPoseidonHash(inputs);
 } 
+
+// CommonJS exports
+module.exports = {
+  mockPoseidonHash,
+  generateCommitment,
+  generateCommitments,
+  realPoseidonHash,
+  generateCommitmentReal
+}; 

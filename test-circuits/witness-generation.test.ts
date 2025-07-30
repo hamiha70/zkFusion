@@ -5,17 +5,17 @@
  * This is the critical parity test between JavaScript logic and Circom circuit.
  */
 
-import { describe, it } from 'mocha';
-import { expect } from 'chai';
-import * as fs from 'fs';
-import * as path from 'path';
-import { Circomkit } from 'circomkit';
+// import { describe, it } = require('mocha');
+const { expect } = require('chai');
+const fs = require('fs');
+const path = require('path');
+const { Circomkit } = require('circomkit');
 
 // Import our utilities
-import { generateCircuitInputs, loadInputsFromFile } from '../circuits/utils/input-generator';
-import { simulateAuction } from '../circuits/utils/auction-simulator';
-import type { Bid, AuctionConstraints } from '../circuits/utils/types';
-import { generateCommitmentReal } from '../circuits/utils/hash-utils';
+const { generateCircuitInputs, loadInputsFromFile } = require('../circuits/utils/input-generator');
+const { simulateAuction } = require('../circuits/utils/auction-simulator');
+// const { Bid, AuctionConstraints } = require('../circuits/utils/types');
+const { generateCommitmentReal } = require('../circuits/utils/hash-utils');
 
 describe('Circuit Witness Generation - Real Hash Integration', function() {
   let circomkit: Circomkit;

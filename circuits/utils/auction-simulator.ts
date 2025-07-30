@@ -10,19 +10,31 @@
  * - Future auction runner implementations
  */
 
-const { CIRCUIT_CONFIG } = require('./types');
+const { 
+  BN254_PRIME,
+  isFieldElement,
+  FieldElementError,
+  CIRCUIT_CONFIG
+} = require('./types');
 
 /**
  * Simulate the zkFusion auction algorithm
- * @param bids Array of bids to process
- * @param constraints Auction constraints (price and quantity limits)
+ * 
+ * This implements the core Dutch auction logic:
+ * 1. Pad bids to N=8 elements with null bids
+ * 2. Sort bids by price descending (highest first)
+ * 3. Apply greedy fill with dual constraints
+ * 4. Calculate results and winner bitmask
+ * 
+ * @param bids Array of bid objects
+ * @param constraints Auction constraints (price + quantity limits)
  * @returns Auction results with winners and statistics
  */
 function simulateAuction(bids: any[], constraints: any): any {
   const N = CIRCUIT_CONFIG.N_MAX_BIDS; // Fixed circuit size for zkFusion
   
   // Pad bids to N elements with null bids
-  const paddedBids: any[] = [...bids];
+  const paddedBids: Bid[] = [...bids];
   while (paddedBids.length < N) {
     paddedBids.push({
       price: 0n,
@@ -32,76 +44,105 @@ function simulateAuction(bids: any[], constraints: any): any {
     });
   }
   
-  // Sort bids by price (descending) - Dutch auction
+  // Ensure original indices are set correctly
+  paddedBids.forEach((bid, index) => {
+    bid.originalIndex = index;
+  });
+  
+  // Sort bids by price descending (Dutch auction - highest price wins first)
   const sortedBids = [...paddedBids].sort((a, b) => {
-    if (a.price > b.price) return -1;
-    if (a.price < b.price) return 1;
-    return 0;
+    return a.price > b.price ? -1 : a.price < b.price ? 1 : 0;
   });
   
   // Greedy fill algorithm with dual constraints
-  const winners: any[] = [];
+  const winners: Bid[] = [];
   let totalFill = 0n;
   let totalValue = 0n;
   let winnerBitmask = 0;
   
-  for (let i = 0; i < sortedBids.length; i++) {
-    const bid = sortedBids[i];
-    
-    // Skip null bids (price = 0)
+  for (const bid of sortedBids) {
+    // Skip null bids (padding)
     if (bid.price === 0n) continue;
     
-    // Check dual constraints
-    const fitsQuantity = totalFill + bid.amount < constraints.makerMaximumAmount; // Strict less-than
+    // Apply dual constraints:
+    // 1. Quantity constraint: total fill must not exceed maximum
+    const fitsQuantity = (totalFill + bid.amount) <= constraints.makerMaximumAmount;
+    
+    // 2. Price constraint: bid price must meet minimum per-token price
     const meetsPrice = bid.price >= constraints.makerMinimumPrice;
     
+    // Include bid only if BOTH constraints are satisfied
     if (fitsQuantity && meetsPrice) {
       winners.push(bid);
-      totalFill += BigInt(bid.amount);
-      totalValue += bid.price * BigInt(bid.amount);
-      winnerBitmask |= (1 << Number(bid.originalIndex));
+      totalFill += bid.amount;
+      totalValue += bid.price * bid.amount;
+      
+      // Set bit for this winner's original position
+      winnerBitmask |= (1 << bid.originalIndex);
     }
   }
   
-  // Calculate weighted average price
-  const weightedAvgPrice = winners.length > 0 ? totalValue / totalFill : 0n;
+  // Calculate weighted average price (avoid division by zero)
+  const weightedAvgPrice = totalFill > 0n ? totalValue / totalFill : 0n;
   
   return {
     winners,
-    numWinners: BigInt(winners.length),
     totalFill,
     totalValue,
     weightedAvgPrice,
-    winnerBitmask
+    numWinners: winners.length,
+    winnerBitmask,
+    winnerBits: generateWinnerBits(winnerBitmask)
   };
 }
 
 /**
- * Generate sorting arrays for circuit input
- * @param bids Array of bids (already padded to N)
+ * Generate sorting arrays for ZK circuit input
+ * 
+ * The circuit needs to verify that bids are sorted correctly.
+ * This function generates the required permutation arrays.
+ * 
+ * @param bids Array of N=8 bids (padded with nulls)
  * @returns Sorting arrays for circuit input
  */
 function generateSortingArrays(bids: any[]) {
   const N = 8;
   
-  // Sort by price descending (Dutch auction)
-  const sortedBids = [...bids].sort((a, b) => {
-    if (a.price > b.price) return -1;
-    if (a.price < b.price) return 1;
-    return 0;
+  // Ensure we have exactly N bids
+  if (bids.length !== N) {
+    throw new Error(`generateSortingArrays expects exactly ${N} bids, got ${bids.length}`);
+  }
+  
+  // Create array of indices with their corresponding prices for sorting
+  const indexedBids = bids.map((bid, index) => ({
+    originalIndex: index,
+    price: bid.price,
+    amount: bid.amount
+  }));
+  
+  // Sort by price descending, maintaining original indices
+  indexedBids.sort((a, b) => {
+    return a.price > b.price ? -1 : a.price < b.price ? 1 : 0;
   });
   
-  // Extract arrays
-  const sortedPrices = sortedBids.map((bid: any) => bid.price);
-  const sortedAmounts = sortedBids.map((bid: any) => bid.amount);
-  const sortedIndices = sortedBids.map((bid: any) => BigInt(bid.originalIndex));
+  // Extract sorted arrays
+  const sortedPrices = indexedBids.map(item => item.price);
+  const sortedAmounts = indexedBids.map(item => item.amount);
+  const sortedIndices = indexedBids.map(item => item.originalIndex);
   
-  return { sortedPrices, sortedAmounts, sortedIndices };
+  return {
+    sortedPrices,
+    sortedAmounts,
+    sortedIndices
+  };
 }
 
 /**
- * Generate winner bits array from bitmask
- * @param winnerBitmask Bitmask representing winners
+ * Generate winner bits array for ZK circuit input
+ * 
+ * The circuit needs individual winner bits (not a bitmask) for constraint validation.
+ * 
+ * @param winnerBitmask Bitmask indicating winners (bit i = 1 if position i won)
  * @returns Array of 8 winner bits (0 or 1)
  */
 function generateWinnerBits(winnerBitmask: number): number[] {
@@ -109,7 +150,7 @@ function generateWinnerBits(winnerBitmask: number): number[] {
   const winnerBits: number[] = [];
   
   for (let i = 0; i < N; i++) {
-    winnerBits.push((winnerBitmask & (1 << i)) ? 1 : 0);
+    winnerBits.push((winnerBitmask >> i) & 1);
   }
   
   return winnerBits;
@@ -121,9 +162,8 @@ function generateWinnerBits(winnerBitmask: number): number[] {
 function formatEther(value: bigint): string {
   const eth = Number(value) / 1e18;
   return eth.toFixed(6);
-}
+} 
 
-// CommonJS exports
 module.exports = {
   simulateAuction,
   generateSortingArrays,

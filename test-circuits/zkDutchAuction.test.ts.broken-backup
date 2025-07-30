@@ -5,21 +5,18 @@
  * Tests sorting verification, auction logic, and security properties.
  */
 
-// Wrap in IIFE to avoid variable redeclaration issues
-(function() {
-
-const { describe, it, before } = require('mocha');
-const { expect } = require('chai');
-const { Circomkit } = require('circomkit');
+import { describe, it, before } from 'mocha';
+import { expect } from 'chai';
+import { Circomkit } from 'circomkit';
+import type { CircuitInputs, CircuitOutputs } from './types';
 
 // Helper function to generate proper Poseidon hashes for test inputs
-async function generateTestCommitments(bidPrices: bigint[], bidAmounts: bigint[], bidderAddresses: string[]): Promise<bigint[]> {
-  const { realPoseidonHash } = require('../circuits/utils/hash-utils');
+async function generateTestCommitments(bidPrices: bigint[], bidAmounts: bigint[], nonces: bigint[]): Promise<bigint[]> {
+  const { hashBid } = await import('../circuits/utils/poseidon.js');
   const commitments: bigint[] = [];
-  const contractAddress = '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd'; // Mock contract address
   
   for (let i = 0; i < bidPrices.length; i++) {
-    const hash = realPoseidonHash([bidPrices[i], bidAmounts[i], BigInt(bidderAddresses[i]), BigInt(contractAddress)]);
+    const hash = await hashBid(bidPrices[i], bidAmounts[i], nonces[i]);
     commitments.push(BigInt(hash));
   }
   
@@ -46,8 +43,8 @@ describe('zkDutchAuction Circuit', function() {
       circuit = await circomkit.WitnessTester('zkDutchAuction', {
         file: 'zkDutchAuction',
         template: 'zkDutchAuction',
-        params: [8],
-        pubs: ['commitments', 'commitmentContractAddress', 'makerMinimumPrice', 'makerMaximumAmount']
+        params: [4],
+        pubs: ['commitments', 'makerAsk', 'commitmentContractAddress']
       });
       
       console.log('✅ Circuit compiled and tester ready');
@@ -64,14 +61,14 @@ describe('zkDutchAuction Circuit', function() {
       // Generate proper Poseidon hashes for commitments
       const bidPrices = [1000n, 800n, 600n, 400n];
       const bidAmounts = [100n, 150n, 200n, 250n];
-      const bidderAddresses = ['0x12345678901234567890123456789012', '0xabcdef1234567890abcdef123456789012', '0x11223344556677889900112233445566', '0x11112222333344445555666677778888'];
-      const commitments = await generateTestCommitments(bidPrices, bidAmounts, bidderAddresses);
+      const nonces = [123n, 456n, 789n, 12n];
+      const commitments = await generateTestCommitments(bidPrices, bidAmounts, nonces);
       
       const input: CircuitInputs = {
         // Private inputs - already sorted bids
         bidPrices: bidPrices,
         bidAmounts: bidAmounts,
-        bidderAddresses: bidderAddresses,
+        nonces: nonces,
         
         // Sorting verification - identity mapping since already sorted
         sortedPrices: [1000n, 800n, 600n, 400n],  // Same as original
@@ -107,14 +104,14 @@ describe('zkDutchAuction Circuit', function() {
       // Generate proper Poseidon hashes for commitments
       const bidPrices = [600n, 1000n, 400n, 800n];
       const bidAmounts = [200n, 100n, 250n, 150n];
-      const bidderAddresses = ['0x11112222333344445555666677778888', '0xabcdef1234567890abcdef123456789012', '0x12345678901234567890123456789012', '0x11223344556677889900112233445566'];
-      const commitments = await generateTestCommitments(bidPrices, bidAmounts, bidderAddresses);
+      const nonces = [789n, 123n, 12n, 456n];
+      const commitments = await generateTestCommitments(bidPrices, bidAmounts, nonces);
       
       const input: CircuitInputs = {
         // Private inputs - unsorted bids
         bidPrices: bidPrices,
         bidAmounts: bidAmounts,
-        bidderAddresses: bidderAddresses,
+        nonces: nonces,
         
         // Sorting verification - correct sorted order
         sortedPrices: [1000n, 800n, 600n, 400n],  // Descending order
@@ -144,13 +141,13 @@ describe('zkDutchAuction Circuit', function() {
       // Generate proper Poseidon hashes for commitments
       const bidPrices = [600n, 1000n, 400n, 800n];
       const bidAmounts = [200n, 100n, 250n, 150n];
-      const bidderAddresses = ['0x11112222333344445555666677778888', '0xabcdef1234567890abcdef123456789012', '0x12345678901234567890123456789012', '0x11223344556677889900112233445566'];
-      const commitments = await generateTestCommitments(bidPrices, bidAmounts, bidderAddresses);
+      const nonces = [789n, 123n, 12n, 456n];
+      const commitments = await generateTestCommitments(bidPrices, bidAmounts, nonces);
       
       const invalidInput: CircuitInputs = {
         bidPrices: bidPrices,
         bidAmounts: bidAmounts,
-        bidderAddresses: bidderAddresses,
+        nonces: nonces,
         
         // WRONG: Not in descending order
         sortedPrices: [800n, 1000n, 600n, 400n],  // 800 > 1000 is wrong!
@@ -177,13 +174,13 @@ describe('zkDutchAuction Circuit', function() {
       // Generate proper Poseidon hashes for commitments
       const bidPrices = [600n, 1000n, 400n, 800n];
       const bidAmounts = [200n, 100n, 250n, 150n];
-      const bidderAddresses = ['0x11112222333344445555666677778888', '0xabcdef1234567890abcdef123456789012', '0x12345678901234567890123456789012', '0x11223344556677889900112233445566'];
-      const commitments = await generateTestCommitments(bidPrices, bidAmounts, bidderAddresses);
+      const nonces = [789n, 123n, 12n, 456n];
+      const commitments = await generateTestCommitments(bidPrices, bidAmounts, nonces);
       
       const maliciousInput: CircuitInputs = {
         bidPrices: bidPrices,
         bidAmounts: bidAmounts,
-        bidderAddresses: bidderAddresses,
+        nonces: nonces,
         
         sortedPrices: [1000n, 800n, 600n, 400n],   // Correct sorting
         sortedAmounts: [100n, 150n, 200n, 250n],   // Correct amounts
@@ -224,13 +221,13 @@ describe('zkDutchAuction Circuit', function() {
       // Generate proper Poseidon hashes for commitments
       const bidPrices = [1000n, 800n, 600n, 400n];
       const bidAmounts = [100n, 150n, 200n, 250n];
-      const bidderAddresses = ['0x12345678901234567890123456789012', '0xabcdef1234567890abcdef123456789012', '0x11223344556677889900112233445566', '0x11112222333344445555666677778888'];
-      const commitments = await generateTestCommitments(bidPrices, bidAmounts, bidderAddresses);
+      const nonces = [123n, 456n, 789n, 12n];
+      const commitments = await generateTestCommitments(bidPrices, bidAmounts, nonces);
       
       const validInput: CircuitInputs = {
         bidPrices: bidPrices,
         bidAmounts: bidAmounts,
-        bidderAddresses: bidderAddresses,
+        nonces: nonces,
         sortedPrices: [1000n, 800n, 600n, 400n],
         sortedAmounts: [100n, 150n, 200n, 250n],
         sortedIndices: [0n, 1n, 2n, 3n],
@@ -261,13 +258,13 @@ describe('zkDutchAuction Circuit', function() {
       // Generate proper Poseidon hashes for commitments
       const bidPrices = [1000n, 800n, 600n, 400n];
       const bidAmounts = [100n, 150n, 200n, 250n];
-      const bidderAddresses = ['0x12345678901234567890123456789012', '0xabcdef1234567890abcdef123456789012', '0x11223344556677889900112233445566', '0x11112222333344445555666677778888'];
-      const commitments = await generateTestCommitments(bidPrices, bidAmounts, bidderAddresses);
+      const nonces = [123n, 456n, 789n, 12n];
+      const commitments = await generateTestCommitments(bidPrices, bidAmounts, nonces);
       
       const input: CircuitInputs = {
         bidPrices: bidPrices,
         bidAmounts: bidAmounts,
-        bidderAddresses: bidderAddresses,
+        nonces: nonces,
         sortedPrices: [1000n, 800n, 600n, 400n],
         sortedAmounts: [100n, 150n, 200n, 250n],
         sortedIndices: [0n, 1n, 2n, 3n],
@@ -291,6 +288,4 @@ describe('zkDutchAuction Circuit', function() {
       }
     });
   });
-});
-
-})(); // Close IIFE 
+}); 

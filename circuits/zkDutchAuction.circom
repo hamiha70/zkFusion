@@ -113,7 +113,7 @@ template zkDutchAuction(N) {
         // Check if this bid fits within remaining token capacity
         canFit[i] = LessThan(252);  // Maximum supported by circomlib
         canFit[i].in[0] <== cumulativeFill[i] + sortedAmounts[i];
-        canFit[i].in[1] <== makerMaximumAmount + 1;  // +1 for strict less-than
+        canFit[i].in[1] <== makerMaximumAmount + 1;  // LessThan(a, b+1) implements a ≤ b
         
         // Check if price meets minimum requirement per token
         priceOK[i] = GreaterEqThan(252);  // Maximum supported by circomlib

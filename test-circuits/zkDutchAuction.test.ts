@@ -175,10 +175,19 @@ describe('zkDutchAuction Circuit', function() {
     it('should verify unsorted input with correct permutation', async function() {
       console.log('🧪 Testing unsorted input with permutation...');
       
-      // Generate proper Poseidon hashes for commitments
-      const bidPrices = [600n, 1000n, 400n, 800n];
-      const bidAmounts = [200n, 100n, 250n, 150n];
-      const bidderAddresses = ['0x11112222333344445555666677778888', '0xabcdef1234567890abcdef123456789012', '0x12345678901234567890123456789012', '0x11223344556677889900112233445566'];
+      // Generate proper Poseidon hashes for commitments (expand to 8 elements)
+      const bidPrices = [600n, 1000n, 400n, 800n, 0n, 0n, 0n, 0n];
+      const bidAmounts = [200n, 100n, 250n, 150n, 0n, 0n, 0n, 0n];
+      const bidderAddresses = [
+        '0x11112222333344445555666677778888', 
+        '0xabcdef1234567890abcdef123456789012', 
+        '0x12345678901234567890123456789012', 
+        '0x11223344556677889900112233445566',
+        '0x0000000000000000000000000000000000000000',
+        '0x0000000000000000000000000000000000000000',
+        '0x0000000000000000000000000000000000000000',
+        '0x0000000000000000000000000000000000000000'
+      ];
       const commitments = await generateTestCommitments(bidPrices, bidAmounts, bidderAddresses);
       
       const input: CircuitInputs = {
@@ -187,10 +196,11 @@ describe('zkDutchAuction Circuit', function() {
         bidAmounts: bidAmounts,
         bidderAddresses: bidderAddresses,
         
-        // Sorting verification - correct sorted order
-        sortedPrices: [1000n, 800n, 600n, 400n],  // Descending order
-        sortedAmounts: [100n, 150n, 200n, 250n],  // Corresponding amounts
-        sortedIndices: [1n, 3n, 0n, 2n],          // Permutation: [1→0, 3→1, 0→2, 2→3]
+        // Sorting verification - correct sorted order (expand to 8 elements)
+        sortedPrices: [1000n, 800n, 600n, 400n, 0n, 0n, 0n, 0n],  // Descending order
+        sortedAmounts: [100n, 150n, 200n, 250n, 0n, 0n, 0n, 0n],  // Corresponding amounts
+        sortedIndices: [1n, 3n, 0n, 2n, 4n, 5n, 6n, 7n],          // Permutation + identity for zeros
+        winnerBits: [0n, 1n, 0n, 1n, 0n, 0n, 0n, 0n],            // Only bids 1 and 3 win (1000, 800)
         
         // Public inputs
         commitments: commitments,
@@ -213,10 +223,19 @@ describe('zkDutchAuction Circuit', function() {
     it('should reject invalid sorting order', async function() {
       console.log('🧪 Testing rejection of invalid sorting...');
       
-      // Generate proper Poseidon hashes for commitments
-      const bidPrices = [600n, 1000n, 400n, 800n];
-      const bidAmounts = [200n, 100n, 250n, 150n];
-      const bidderAddresses = ['0x11112222333344445555666677778888', '0xabcdef1234567890abcdef123456789012', '0x12345678901234567890123456789012', '0x11223344556677889900112233445566'];
+      // Generate proper Poseidon hashes for commitments (expand to 8 elements)
+      const bidPrices = [600n, 1000n, 400n, 800n, 0n, 0n, 0n, 0n];
+      const bidAmounts = [200n, 100n, 250n, 150n, 0n, 0n, 0n, 0n];
+      const bidderAddresses = [
+        '0x11112222333344445555666677778888', 
+        '0xabcdef1234567890abcdef123456789012', 
+        '0x12345678901234567890123456789012', 
+        '0x11223344556677889900112233445566',
+        '0x0000000000000000000000000000000000000000',
+        '0x0000000000000000000000000000000000000000',
+        '0x0000000000000000000000000000000000000000',
+        '0x0000000000000000000000000000000000000000'
+      ];
       const commitments = await generateTestCommitments(bidPrices, bidAmounts, bidderAddresses);
       
       const invalidInput: CircuitInputs = {
@@ -224,10 +243,11 @@ describe('zkDutchAuction Circuit', function() {
         bidAmounts: bidAmounts,
         bidderAddresses: bidderAddresses,
         
-        // WRONG: Not in descending order
-        sortedPrices: [800n, 1000n, 600n, 400n],  // 800 > 1000 is wrong!
-        sortedAmounts: [150n, 100n, 200n, 250n],
-        sortedIndices: [3n, 1n, 0n, 2n],
+        // WRONG: Not in descending order (expand to 8 elements)
+        sortedPrices: [800n, 1000n, 600n, 400n, 0n, 0n, 0n, 0n],  // 800 > 1000 is wrong!
+        sortedAmounts: [150n, 100n, 200n, 250n, 0n, 0n, 0n, 0n],
+        sortedIndices: [3n, 1n, 0n, 2n, 4n, 5n, 6n, 7n],
+        winnerBits: [0n, 0n, 0n, 0n, 0n, 0n, 0n, 0n],            // No winners due to invalid sorting
         
         commitments: commitments,
         commitmentContractAddress: 123456789n,
@@ -247,10 +267,19 @@ describe('zkDutchAuction Circuit', function() {
     it('should reject malicious permutation', async function() {
       console.log('🧪 Testing rejection of malicious permutation...');
       
-      // Generate proper Poseidon hashes for commitments
-      const bidPrices = [600n, 1000n, 400n, 800n];
-      const bidAmounts = [200n, 100n, 250n, 150n];
-      const bidderAddresses = ['0x11112222333344445555666677778888', '0xabcdef1234567890abcdef123456789012', '0x12345678901234567890123456789012', '0x11223344556677889900112233445566'];
+      // Generate proper Poseidon hashes for commitments (expand to 8 elements)
+      const bidPrices = [600n, 1000n, 400n, 800n, 0n, 0n, 0n, 0n];
+      const bidAmounts = [200n, 100n, 250n, 150n, 0n, 0n, 0n, 0n];
+      const bidderAddresses = [
+        '0x11112222333344445555666677778888', 
+        '0xabcdef1234567890abcdef123456789012', 
+        '0x12345678901234567890123456789012', 
+        '0x11223344556677889900112233445566',
+        '0x0000000000000000000000000000000000000000',
+        '0x0000000000000000000000000000000000000000',
+        '0x0000000000000000000000000000000000000000',
+        '0x0000000000000000000000000000000000000000'
+      ];
       const commitments = await generateTestCommitments(bidPrices, bidAmounts, bidderAddresses);
       
       const maliciousInput: CircuitInputs = {
@@ -258,9 +287,10 @@ describe('zkDutchAuction Circuit', function() {
         bidAmounts: bidAmounts,
         bidderAddresses: bidderAddresses,
         
-        sortedPrices: [1000n, 800n, 600n, 400n],   // Correct sorting
-        sortedAmounts: [100n, 150n, 200n, 250n],   // Correct amounts
-        sortedIndices: [0n, 1n, 2n, 3n],           // WRONG! Identity doesn't match unsorted input
+        sortedPrices: [1000n, 800n, 600n, 400n, 0n, 0n, 0n, 0n],   // Correct sorting
+        sortedAmounts: [100n, 150n, 200n, 250n, 0n, 0n, 0n, 0n],   // Correct amounts
+        sortedIndices: [0n, 1n, 2n, 3n, 4n, 5n, 6n, 7n],           // WRONG! Identity doesn't match unsorted input
+        winnerBits: [0n, 0n, 0n, 0n, 0n, 0n, 0n, 0n],            // No winners due to malicious permutation
         
         commitments: commitments,
         commitmentContractAddress: 123456789n,
@@ -295,19 +325,29 @@ describe('zkDutchAuction Circuit', function() {
     it('should generate witness within reasonable time', async function() {
       console.log('🧪 Testing witness generation performance...');
       
-      // Generate proper Poseidon hashes for commitments
-      const bidPrices = [1000n, 800n, 600n, 400n];
-      const bidAmounts = [100n, 150n, 200n, 250n];
-      const bidderAddresses = ['0x12345678901234567890123456789012', '0xabcdef1234567890abcdef123456789012', '0x11223344556677889900112233445566', '0x11112222333344445555666677778888'];
+      // Generate proper Poseidon hashes for commitments (expand to 8 elements)
+      const bidPrices = [1000n, 800n, 600n, 400n, 0n, 0n, 0n, 0n];
+      const bidAmounts = [100n, 150n, 200n, 250n, 0n, 0n, 0n, 0n];
+      const bidderAddresses = [
+        '0x12345678901234567890123456789012', 
+        '0xabcdef1234567890abcdef123456789012', 
+        '0x11223344556677889900112233445566', 
+        '0x11112222333344445555666677778888',
+        '0x0000000000000000000000000000000000000000',
+        '0x0000000000000000000000000000000000000000',
+        '0x0000000000000000000000000000000000000000',
+        '0x0000000000000000000000000000000000000000'
+      ];
       const commitments = await generateTestCommitments(bidPrices, bidAmounts, bidderAddresses);
       
       const validInput: CircuitInputs = {
         bidPrices: bidPrices,
         bidAmounts: bidAmounts,
         bidderAddresses: bidderAddresses,
-        sortedPrices: [1000n, 800n, 600n, 400n],
-        sortedAmounts: [100n, 150n, 200n, 250n],
-        sortedIndices: [0n, 1n, 2n, 3n],
+        sortedPrices: [1000n, 800n, 600n, 400n, 0n, 0n, 0n, 0n],
+        sortedAmounts: [100n, 150n, 200n, 250n, 0n, 0n, 0n, 0n],
+        sortedIndices: [0n, 1n, 2n, 3n, 4n, 5n, 6n, 7n],
+        winnerBits: [1n, 1n, 1n, 0n, 0n, 0n, 0n, 0n],            // First 3 bids win (1000, 800, 600)
         commitments: commitments,
         commitmentContractAddress: 123456789n,
         makerMinimumPrice: 0n,
@@ -333,23 +373,33 @@ describe('zkDutchAuction Circuit', function() {
     it('should handle zero maker ask (no winners)', async function() {
       console.log('🧪 Testing zero maker ask...');
       
-      // Generate proper Poseidon hashes for commitments
-      const bidPrices = [1000n, 800n, 600n, 400n];
-      const bidAmounts = [100n, 150n, 200n, 250n];
-      const bidderAddresses = ['0x12345678901234567890123456789012', '0xabcdef1234567890abcdef123456789012', '0x11223344556677889900112233445566', '0x11112222333344445555666677778888'];
+      // Generate proper Poseidon hashes for commitments (expand to 8 elements)
+      const bidPrices = [1000n, 800n, 600n, 400n, 0n, 0n, 0n, 0n];
+      const bidAmounts = [100n, 150n, 200n, 250n, 0n, 0n, 0n, 0n];
+      const bidderAddresses = [
+        '0x12345678901234567890123456789012', 
+        '0xabcdef1234567890abcdef123456789012', 
+        '0x11223344556677889900112233445566', 
+        '0x11112222333344445555666677778888',
+        '0x0000000000000000000000000000000000000000',
+        '0x0000000000000000000000000000000000000000',
+        '0x0000000000000000000000000000000000000000',
+        '0x0000000000000000000000000000000000000000'
+      ];
       const commitments = await generateTestCommitments(bidPrices, bidAmounts, bidderAddresses);
       
       const input: CircuitInputs = {
         bidPrices: bidPrices,
         bidAmounts: bidAmounts,
         bidderAddresses: bidderAddresses,
-        sortedPrices: [1000n, 800n, 600n, 400n],
-        sortedAmounts: [100n, 150n, 200n, 250n],
-        sortedIndices: [0n, 1n, 2n, 3n],
+        sortedPrices: [1000n, 800n, 600n, 400n, 0n, 0n, 0n, 0n],
+        sortedAmounts: [100n, 150n, 200n, 250n, 0n, 0n, 0n, 0n],
+        sortedIndices: [0n, 1n, 2n, 3n, 4n, 5n, 6n, 7n],
+        winnerBits: [0n, 0n, 0n, 0n, 0n, 0n, 0n, 0n],            // No winners due to zero maker ask
         commitments: commitments,
         commitmentContractAddress: 123456789n,
         makerMinimumPrice: 0n,
-        makerMaximumAmount: 500n
+        makerMaximumAmount: 0n                                    // Zero maker ask = no winners
       };
 
       const expectedOutput: Partial<CircuitOutputs> = {

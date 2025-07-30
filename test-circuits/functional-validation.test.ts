@@ -5,17 +5,20 @@
  * This ensures our business logic is correct before dealing with circuit complexity.
  */
 
-// Wrap in IIFE to avoid global variable conflicts
+// Wrap in IIFE to avoid variable redeclaration issues
 (function() {
 
+const { describe, it } = require('mocha');
 const { expect } = require('chai');
+const fs = require('fs');
+const path = require('path');
+
 const {
   simulateAuction,
   generateSortingArrays,
   generateWinnerBits,
-  formatEther
-} = require('../circuits/utils/auction-simulator';
-const { generateMockCommitment } = require('../circuits/utils/hash-utils';
+} = require('../circuits/utils/auction-simulator');
+const { mockPoseidonHash, generateCommitment } = require('../circuits/utils/hash-utils');
 
 // Global test logging
 interface TestCaseLog {
@@ -119,7 +122,7 @@ function saveTestLogs() {
     fs.mkdirSync(logDir, { recursive: true });
   }
   
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-';
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
   const filename = `functional-validation-${timestamp}.json`;
   const filepath = path.join(logDir, filename);
   
@@ -678,7 +681,6 @@ describe('zkFusion Functional Validation', function() {
       expect(actualResult.weightedAvgPrice).to.equal(0n);
     });
   });
-
-}); // Close main describe
+});
 
 })(); // Close IIFE 

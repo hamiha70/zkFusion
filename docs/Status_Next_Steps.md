@@ -1264,3 +1264,46 @@ This analysis provides a clear, economically justified path forward for zkFusion
 4. **Choose solution approach** - Based on time constraints and requirements
 
 **⚠️ CRITICAL**: Mock implementation is NOT cryptographically secure and must be replaced before production deployment. 
+
+## CIRCUIT EFFICIENCY OPTIMIZATION OPPORTUNITY 🚀
+
+**Date:** July 2025  
+**Status:** Identified, Not Implemented (Strategic Decision)
+
+### **Discovery:**
+The current `zkDutchAuction.circom` circuit has a redundancy in its input handling:
+
+**Current Implementation:**
+- Circuit receives `sortedPrices[N]` and `sortedAmounts[N]` as inputs
+- Circuit calculates what these values should be from `originalPrices`, `originalAmounts`, and `sortedIndices`
+- Circuit then verifies: `sortedPrices[i] === calculatedSortedPrices[i]`
+- Circuit uses the provided sorted values for auction logic
+
+**Optimization Opportunity:**
+- **Remove** `sortedPrices[N]` and `sortedAmounts[N]` as inputs
+- **Use** calculated values directly in auction logic
+- **Eliminate** verification constraints (lines 49-50 in circuit)
+
+### **Constraint Analysis:**
+- **Current:** Calculate + Verify + Use = 3 operations per element
+- **Optimized:** Calculate + Use = 2 operations per element  
+- **Savings:** ~N verification constraints (estimated 8-16 constraints for N=8)
+
+### **Strategic Decision:**
+**NOT implementing immediately** because:
+1. **Debugging Priority:** Keep current working interfaces stable
+2. **Interface Stability:** Avoid changing all test files and input generators again
+3. **Marginal Impact:** Constraint savings are modest (~1-2% of total 8515 constraints)
+4. **Working System First:** Focus on getting end-to-end functionality before micro-optimizations
+
+### **Future Implementation Notes:**
+When implementing this optimization:
+1. Remove `sortedPrices[N]` and `sortedAmounts[N]` from circuit inputs
+2. Replace usage with `priceSum[i][N]` and `amountSum[i][N]` 
+3. Update all input generators and test files
+4. Update public input lists in wrapper circuits
+5. Verify constraint count reduction
+
+**Priority:** Low (Post-Hackathon Optimization)
+
+--- 

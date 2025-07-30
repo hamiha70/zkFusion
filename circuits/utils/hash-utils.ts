@@ -61,67 +61,14 @@ function generateCommitments(bids: any[], contractAddress: string): bigint[] {
 }
 
 /**
- * Real Poseidon hash implementation using circomlibjs
+ * Real Poseidon hash implementation using poseidon-lite
  */
-// @ts-ignore - circomlibjs doesn't have TypeScript declarations
-// // import { buildPoseidon } from 'circomlibjs';
+const { poseidon4 } = require('poseidon-lite');
 
-let poseidonInstance: any = null;
-
-async function getPoseidon() {
-  if (!poseidonInstance) {
-    poseidonInstance = await buildPoseidon();
-  }
-  return poseidonInstance;
-}
-
-async function realPoseidonHash(inputs: bigint[]): Promise<bigint> {
-  const poseidon = await getPoseidon();
-  const result = poseidon(inputs);
-  
-  // CRITICAL: circomlibjs Poseidon returns a field element in various formats
-  // We need to extract it correctly and ensure it's within BN254 field bounds
-  const BN254_PRIME = 21888242871839275222246405745257275088548364400416034343698204186575808495617n;
-  
-  let fieldElement: bigint;
-  
-  if (typeof result === 'bigint') {
-    fieldElement = result;
-  } else if (result && typeof result === 'object' && result.toString) {
-    // circomlibjs often returns a field element object
-    const str = result.toString();
-    if (str.includes(',')) {
-      // This IS the expected format - comma-separated bytes representing the field element
-      // Convert the comma-separated bytes to a single BigInt
-      const bytes = str.split(',').map((s: string) => parseInt(s.trim()));
-      fieldElement = 0n;
-      for (let i = 0; i < bytes.length; i++) {
-        fieldElement = (fieldElement * 256n) + BigInt(bytes[i]);
-      }
-    } else {
-      fieldElement = BigInt(str);
-    }
-  } else if (Array.isArray(result)) {
-    // Handle array format directly
-    fieldElement = 0n;
-    for (let i = 0; i < result.length; i++) {
-      fieldElement = (fieldElement * 256n) + BigInt(result[i]);
-    }
-  } else {
-    throw new Error(`Unexpected Poseidon result format: ${typeof result}, value: ${result}`);
-  }
-  
-  // Ensure the result is within the BN254 field bounds
-  if (fieldElement >= BN254_PRIME) {
-    fieldElement = fieldElement % BN254_PRIME;
-  }
-  
-  // Ensure it's positive
-  if (fieldElement < 0n) {
-    fieldElement = fieldElement + BN254_PRIME;
-  }
-  
-  return fieldElement;
+function realPoseidonHash(inputs: bigint[]): bigint {
+  // Use poseidon-lite which is compatible with our circuit
+  const result = poseidon4(inputs);
+  return BigInt(result);
 }
 
 /**

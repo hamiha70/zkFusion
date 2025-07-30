@@ -16,13 +16,26 @@ const { Circomkit } = require('circomkit');
 async function generateTestCommitments(bidPrices: bigint[], bidAmounts: bigint[], bidderAddresses: string[]): Promise<bigint[]> {
   const { realPoseidonHash } = require('../circuits/utils/hash-utils');
   const commitments: bigint[] = [];
-  const contractAddress = '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd'; // Mock contract address
+  const contractAddress = 123456789n; // Use same address as circuit input!
+  
+  console.log('🔍 HASH GENERATION DEBUG:');
+  console.log('Contract Address:', contractAddress);
   
   for (let i = 0; i < bidPrices.length; i++) {
-    const hash = realPoseidonHash([bidPrices[i], bidAmounts[i], BigInt(bidderAddresses[i]), BigInt(contractAddress)]);
+    const inputs = [bidPrices[i], bidAmounts[i], BigInt(bidderAddresses[i]), contractAddress];
+    console.log(`\n📊 Bid ${i}:`);
+    console.log('  Price:', bidPrices[i]);
+    console.log('  Amount:', bidAmounts[i]);
+    console.log('  Address:', bidderAddresses[i]);
+    console.log('  Address as BigInt:', BigInt(bidderAddresses[i]));
+    console.log('  Inputs to hash:', inputs);
+    
+    const hash = realPoseidonHash(inputs);
+    console.log('  Generated Hash:', hash);
     commitments.push(BigInt(hash));
   }
   
+  console.log('\n🎯 Final Commitments Array:', commitments);
   return commitments;
 }
 
@@ -62,27 +75,85 @@ describe('zkDutchAuction Circuit', function() {
       console.log('🧪 Testing identity permutation (already sorted)...');
       
       // Generate proper Poseidon hashes for commitments
-      const bidPrices = [1000n, 800n, 600n, 400n];
-      const bidAmounts = [100n, 150n, 200n, 250n];
-      const bidderAddresses = ['0x12345678901234567890123456789012', '0xabcdef1234567890abcdef123456789012', '0x11223344556677889900112233445566', '0x11112222333344445555666677778888'];
+      const bidPrices = [1000n, 800n, 600n, 400n, 0n, 0n, 0n, 0n];
+      const bidAmounts = [100n, 150n, 200n, 250n, 0n, 0n, 0n, 0n];
+      const bidderAddresses = [
+        '0x1234567890123456789012345678901234567890',
+        '0xabcdef1234567890abcdef1234567890abcdef12',
+        '0x1122334455667788990011223344556677889900',
+        '0x1111222233334444555566667777888899990000',
+        '0x0000000000000000000000000000000000000000',
+        '0x0000000000000000000000000000000000000000',
+        '0x0000000000000000000000000000000000000000',
+        '0x0000000000000000000000000000000000000000'
+      ];
       const commitments = await generateTestCommitments(bidPrices, bidAmounts, bidderAddresses);
       
+      console.log('\n🧮 MANUAL WINNER CALCULATION:');
+      console.log('makerMaximumAmount:', 500n);
+      console.log('makerMinimumPrice:', 0n);
+      
+      let cumulativeFill = 0n;
+      const expectedWinners = [];
+      for (let i = 0; i < 4; i++) { // Only check non-zero bids
+        const price = bidPrices[i];
+        const amount = bidAmounts[i];
+        const meetsPrice = price >= 0n; // makerMinimumPrice = 0
+        const fitsQuantity = (cumulativeFill + amount) <= 500n; // makerMaximumAmount = 500
+        
+        console.log(`Bid ${i}: price=${price}, amount=${amount}`);
+        console.log(`  Cumulative before: ${cumulativeFill}`);
+        console.log(`  Would be after: ${cumulativeFill + amount}`);
+        console.log(`  Meets price (>= 0): ${meetsPrice}`);
+        console.log(`  Fits quantity (<= 500): ${fitsQuantity}`);
+        
+        if (meetsPrice && fitsQuantity) {
+          expectedWinners.push(1);
+          cumulativeFill += amount;
+          console.log(`  → WINNER! New cumulative: ${cumulativeFill}`);
+        } else {
+          expectedWinners.push(0);
+          console.log(`  → NOT WINNER`);
+        }
+      }
+      
+      // Add zeros for remaining positions
+      while (expectedWinners.length < 8) {
+        expectedWinners.push(0);
+      }
+      
+      console.log('Expected winners:', expectedWinners);
+      console.log('Our winnerBits: ', [1, 1, 1, 0, 0, 0, 0, 0]);
+      console.log('Match?', JSON.stringify(expectedWinners) === JSON.stringify([1, 1, 1, 0, 0, 0, 0, 0]));
+      
       const input: CircuitInputs = {
-        // Private inputs - already sorted bids
+        // Private inputs - already sorted bids (what we're proving)
         bidPrices: bidPrices,
         bidAmounts: bidAmounts,
         bidderAddresses: bidderAddresses,
         
-        // Sorting verification - identity mapping since already sorted
-        sortedPrices: [1000n, 800n, 600n, 400n],  // Same as original
-        sortedAmounts: [100n, 150n, 200n, 250n],  // Same as original
-        sortedIndices: [0n, 1n, 2n, 3n],          // Identity permutation
+        // Sorting verification - since bids are already sorted, use identity mapping
+        sortedPrices: [1000n, 800n, 600n, 400n, 0n, 0n, 0n, 0n],  // Same as bidPrices
+        sortedAmounts: [100n, 150n, 200n, 250n, 0n, 0n, 0n, 0n],  // Same as bidAmounts  
+        sortedIndices: [0n, 1n, 2n, 3n, 4n, 5n, 6n, 7n],          // Identity permutation
+        winnerBits: [1n, 1n, 1n, 0n, 0n, 0n, 0n, 0n],             // First 3 bids win (100+150+200=450 ≤ 500)
         
         // Public inputs
         commitments: commitments,
-        makerAsk: 500n,                            // Can fill first 3 bids (100+150+200=450)
-        commitmentContractAddress: 123456789n      // Mock contract address
+        commitmentContractAddress: 123456789n,      // Mock contract address
+        makerMinimumPrice: 0n,                      // No minimum price constraint
+        makerMaximumAmount: 500n                    // Can fill first 3 bids (100+150+200=450)
       };
+      
+      console.log('\n🔧 CIRCUIT INPUT DEBUG:');
+      console.log('Input structure:');
+      console.log('  bidPrices:', input.bidPrices);
+      console.log('  bidAmounts:', input.bidAmounts);
+      console.log('  bidderAddresses:', input.bidderAddresses);
+      console.log('  commitments:', input.commitments);
+      console.log('  commitmentContractAddress:', input.commitmentContractAddress);
+      console.log('  makerMinimumPrice:', input.makerMinimumPrice);
+      console.log('  makerMaximumAmount:', input.makerMaximumAmount);
       
       const expectedOutput: Partial<CircuitOutputs> = {
         totalFill: 450n,      // 100 + 150 + 200 (first 3 bids)
@@ -123,8 +194,9 @@ describe('zkDutchAuction Circuit', function() {
         
         // Public inputs
         commitments: commitments,
-        makerAsk: 500n,
-        commitmentContractAddress: 123456789n
+        commitmentContractAddress: 123456789n,
+        makerMinimumPrice: 0n,
+        makerMaximumAmount: 500n
       };
 
       try {
@@ -158,8 +230,9 @@ describe('zkDutchAuction Circuit', function() {
         sortedIndices: [3n, 1n, 0n, 2n],
         
         commitments: commitments,
-        makerAsk: 500n,
-        commitmentContractAddress: 123456789n
+        commitmentContractAddress: 123456789n,
+        makerMinimumPrice: 0n,
+        makerMaximumAmount: 500n
       };
 
       try {
@@ -190,8 +263,9 @@ describe('zkDutchAuction Circuit', function() {
         sortedIndices: [0n, 1n, 2n, 3n],           // WRONG! Identity doesn't match unsorted input
         
         commitments: commitments,
-        makerAsk: 500n,
-        commitmentContractAddress: 123456789n
+        commitmentContractAddress: 123456789n,
+        makerMinimumPrice: 0n,
+        makerMaximumAmount: 500n
       };
 
       try {
@@ -235,8 +309,9 @@ describe('zkDutchAuction Circuit', function() {
         sortedAmounts: [100n, 150n, 200n, 250n],
         sortedIndices: [0n, 1n, 2n, 3n],
         commitments: commitments,
-        makerAsk: 500n,
-        commitmentContractAddress: 123456789n
+        commitmentContractAddress: 123456789n,
+        makerMinimumPrice: 0n,
+        makerMaximumAmount: 500n
       };
 
       const startTime = Date.now();
@@ -272,8 +347,9 @@ describe('zkDutchAuction Circuit', function() {
         sortedAmounts: [100n, 150n, 200n, 250n],
         sortedIndices: [0n, 1n, 2n, 3n],
         commitments: commitments,
-        makerAsk: 0n,  // Zero maker ask
-        commitmentContractAddress: 123456789n
+        commitmentContractAddress: 123456789n,
+        makerMinimumPrice: 0n,
+        makerMaximumAmount: 500n
       };
 
       const expectedOutput: Partial<CircuitOutputs> = {

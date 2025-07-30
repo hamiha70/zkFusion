@@ -1,7 +1,8 @@
 pragma circom 2.0.0;
 
-include "../node_modules/circomlib/circuits/poseidon.circom";
-include "../node_modules/circomlib/circuits/comparators.circom";
+include "circomlib/circuits/comparators.circom";
+include "circomlib/circuits/poseidon.circom";
+include "circomlib/circuits/gates.circom";
 
 // Subcircuit to verify that a permutation represents a correctly sorted order
 // This is much more efficient than implementing sorting in ZK
@@ -52,50 +53,49 @@ template SortingVerifier(N) {
     }
 }
 
-// Main zkFusion auction circuit with 4-input Poseidon hash and dual constraints
+// Main Dutch auction circuit template
 template zkDutchAuction(N) {
     // Private inputs (revealed bids)
     signal input bidPrices[N];
     signal input bidAmounts[N];
-    signal input bidderAddresses[N];  // Bidder addresses for hash binding
-    // Removed nonces - using commitmentContractAddress for uniqueness
+    signal input bidderAddresses[N];  // Changed from string to field element representation
     
-    // Private inputs (sorting-related)
+    // Private inputs (sorting verification)
     signal input sortedPrices[N];    // Bids sorted by price (descending)
     signal input sortedAmounts[N];   // Corresponding amounts
     signal input sortedIndices[N];   // Mapping from sorted position to original position
     signal input winnerBits[N];      // Individual winner bits (0 or 1) instead of bitmask
     
     // Public inputs (from commitment contract)
-    signal input commitments[N];              // Poseidon hashes (public)
-    signal input commitmentContractAddress;  // Contract address (replay protection)
-    signal input makerMinimumPrice;          // Minimum price per token
-    signal input makerMaximumAmount;         // Maximum tokens to sell
+    signal input commitments[N];              // Poseidon hashes of (price, amount, bidderAddress, contractAddress)
+    signal input commitmentContractAddress;   // Address of the commitment contract
+    signal input makerMinimumPrice;           // Minimum acceptable price per token
+    signal input makerMaximumAmount;          // Maximum tokens to sell
     
-    // Public outputs (aggregated for efficiency)
-    signal output totalFill;
-    signal output weightedAvgPrice;  // Actually total value - contract calculates price
-    signal output numWinners;
-    signal output winnerBitmask;     // Computed from winnerBits for output
+    // Outputs
+    signal output totalFill;           // Total amount of tokens sold
+    signal output weightedAvgPrice;    // Actually total value (contract calculates weighted avg)
+    signal output numWinners;          // Number of winning bids
+    signal output winnerBitmask;       // Bitmask indicating winners (bit i = 1 if bid i wins)
     
-    // 1. Verify sorting is correct
-    component sortVerifier = SortingVerifier(N);
-    sortVerifier.originalPrices <== bidPrices;
-    sortVerifier.originalAmounts <== bidAmounts;
-    sortVerifier.sortedPrices <== sortedPrices;
-    sortVerifier.sortedAmounts <== sortedAmounts;
-    sortVerifier.sortedIndices <== sortedIndices;
-    
-    // 2. Verify commitments match revealed bids using 4-input Poseidon (no nonce)
-    component poseidon[N];
+    // 1. Verify commitments using 4-input Poseidon hash
+    component hasher[N];
     for (var i = 0; i < N; i++) {
-        poseidon[i] = Poseidon(4);  // UPDATED: 4 inputs instead of 5 (removed nonce)
-        poseidon[i].inputs[0] <== bidPrices[i];
-        poseidon[i].inputs[1] <== bidAmounts[i];
-        poseidon[i].inputs[2] <== bidderAddresses[i];  // Address binding
-        poseidon[i].inputs[3] <== commitmentContractAddress;  // Contract binding (was input 3, nonce removed)
-        poseidon[i].out === commitments[i];
+        hasher[i] = Poseidon(4);
+        hasher[i].inputs[0] <== bidPrices[i];
+        hasher[i].inputs[1] <== bidAmounts[i];
+        hasher[i].inputs[2] <== bidderAddresses[i];
+        hasher[i].inputs[3] <== commitmentContractAddress;
+        hasher[i].out === commitments[i];
     }
+    
+    // 2. Verify sorting using the SortingVerifier subcircuit
+    component sortingVerifier = SortingVerifier(N);
+    sortingVerifier.sortedPrices <== sortedPrices;
+    sortingVerifier.sortedAmounts <== sortedAmounts;
+    sortingVerifier.sortedIndices <== sortedIndices;
+    sortingVerifier.originalPrices <== bidPrices;
+    sortingVerifier.originalAmounts <== bidAmounts;
     
     // 3. Calculate auction results using sorted bids with dual constraints
     signal cumulativeFill[N+1];
@@ -107,7 +107,9 @@ template zkDutchAuction(N) {
     
     component canFit[N];      // Quantity constraint check
     component priceOK[N];     // Price constraint check
+    component nonZero[N];     // Non-zero amount constraint check
     signal bidValue[N];       // Intermediate signal to avoid triple multiplication
+    signal constraint1[N];    // Intermediate: canFit[i].out * priceOK[i].out
     
     for (var i = 0; i < N; i++) {
         // Check if this bid fits within remaining token capacity
@@ -120,11 +122,18 @@ template zkDutchAuction(N) {
         priceOK[i].in[0] <== sortedPrices[i];
         priceOK[i].in[1] <== makerMinimumPrice;
         
-        // Winner if BOTH constraints satisfied: fits capacity AND meets price
-        isWinner[i] <== canFit[i].out * priceOK[i].out;
+        // Check if amount is non-zero (prevent zero-amount bids from being winners)
+        nonZero[i] = GreaterThan(252);
+        nonZero[i].in[0] <== sortedAmounts[i];
+        nonZero[i].in[1] <== 0;
         
+        // Winner if ALL constraints satisfied: fits capacity AND meets price AND non-zero amount
         // Break down triple multiplication into quadratic steps
-        bidValue[i] <== sortedPrices[i] * sortedAmounts[i]; // First multiplication
+        constraint1[i] <== canFit[i].out * priceOK[i].out;           // First multiplication
+        isWinner[i] <== constraint1[i] * nonZero[i].out;             // Second multiplication
+        
+        // Calculate bid value for cumulative value calculation
+        bidValue[i] <== sortedPrices[i] * sortedAmounts[i];          // Price * Amount multiplication
         
         // Update cumulative values
         cumulativeFill[i+1] <== cumulativeFill[i] + isWinner[i] * sortedAmounts[i];
@@ -160,6 +169,7 @@ template zkDutchAuction(N) {
         // Calculate bitmask: sum of winnerBits[i] * 2^i
         bitmaskSum[i+1] <== bitmaskSum[i] + winnerBits[i] * (2 ** i);
     }
+    
     numWinners <== winnerCount[N];
     winnerBitmask <== bitmaskSum[N];
 }

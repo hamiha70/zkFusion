@@ -470,3 +470,55 @@ The problem is in the **SortingVerifier logic** when combined with other compone
 1. **Isolate the exact SortingVerifier issue** by testing with different input data
 2. **Test with smaller field elements** to rule out overflow issues
 3. **Implement alternative sorting verification** that avoids the problematic pattern 
+
+---
+
+## 🚨 **ZERO-AMOUNT BID WINNER ISSUE - RESOLVED** ✅
+
+**Date**: July 2025  
+**Error**: `Error: Assert Failed. Error in template zkDutchAuction_80 line: 158`
+
+### **Problem Analysis**
+
+**Root Cause**: Zero-amount bids were incorrectly being treated as winners by the circuit.
+
+**Logic Flow**:
+1. **Test Data**: Bids 4-7 had `price=0, amount=0`
+2. **Circuit Constraints**:
+   - **Price Check**: `0 >= makerMinimumPrice (0)` ✅ **PASS**
+   - **Quantity Check**: `cumulativeFill + 0 <= makerMaximumAmount (500)` ✅ **PASS**
+3. **Result**: Circuit calculated `isWinner[4-7] = 1`
+4. **JavaScript Logic**: Expected `isWinner[4-7] = 0` (zero-amount bids shouldn't win)
+5. **Assertion Failure**: `bitValidator[i].out === 1` failed when comparing circuit vs JS results
+
+### **Solution Implemented**
+
+**Added Non-Zero Amount Constraint**:
+```circom
+// Check if amount is non-zero (prevent zero-amount bids from being winners)
+nonZero[i] = GreaterThan(252);
+nonZero[i].in[0] <== sortedAmounts[i];
+nonZero[i].in[1] <== 0;
+
+// Winner if ALL constraints satisfied: fits capacity AND meets price AND non-zero amount
+// Break down triple multiplication into quadratic steps
+constraint1[i] <== canFit[i].out * priceOK[i].out;           // First multiplication
+isWinner[i] <== constraint1[i] * nonZero[i].out;             // Second multiplication
+```
+
+### **Key Insights**
+
+1. **Constraint Completeness**: Circuit constraints must match business logic exactly
+2. **Zero-Edge Cases**: Always consider edge cases like zero values in constraint design
+3. **Quadratic Constraints**: Triple multiplications must be broken down into quadratic steps
+4. **Test-Driven Development**: Comprehensive test cases catch logic mismatches early
+
+### **Verification**
+- ✅ **Identity permutation test passes**
+- ✅ **numWinners = 3** (correct count)
+- ✅ **Zero-amount bids correctly excluded**
+- ✅ **Circuit compiles without non-quadratic constraint errors**
+
+### **Status**: **RESOLVED** ✅
+
+The circuit now correctly implements the business logic where zero-amount bids are not considered winners, regardless of price constraints. 

@@ -1,9 +1,9 @@
 # zkFusion Circom Circuit Design & Implementation
 
 **Last Updated**: July 2025  
-**Status**: ✅ **TESTING SUCCESSFUL** - All Tests Passing  
-**Circuit Complexity**: 1,804 non-linear constraints, 1,615 linear constraints  
-**Test Results**: 7/7 tests passing ✅
+**Status**: ✅ **CORE FUNCTIONALITY WORKING** - Identity Permutation Test Passing  
+**Circuit Complexity**: 8,515 non-linear constraints, 3,684 linear constraints  
+**Test Results**: 1/4 tests passing ✅ (3 tests have input size issues)
 
 ---
 
@@ -32,7 +32,7 @@ zkFusion uses a **two-file architecture** for maximum flexibility and clarity:
 
 #### **1. `zkDutchAuction.circom` - The Template (Generic Implementation)**
 - **Purpose**: Defines the reusable template for the auction circuit
-- **Size**: 168 lines of actual circuit logic
+- **Size**: 169 lines of actual circuit logic
 - **Parameterized**: `template zkDutchAuction(N)` - can work with any N
 - **Contains**: All business logic (sorting verification, Poseidon hashing, auction constraints)
 - **Critical fixes**: 252-bit comparators for large field elements
@@ -47,8 +47,6 @@ zkFusion uses a **two-file architecture** for maximum flexibility and clarity:
 - **Creates**: `component main = zkDutchAuction(8)`
 - **Fixed parameter**: Hard-coded to N=8 (8 bid slots)
 - **Compilation target**: This is what gets compiled by build scripts
-
-**Think of it as**: An **object instantiation** in programming - creates an actual instance with specific parameters
 
 #### **Build Process Flow**
 1. **Circom compiler** targets `zkDutchAuction8.circom`
@@ -93,7 +91,54 @@ signal input commitmentContractAddress; // Binds proof to specific auction
 signal output totalFill;        // Total amount filled
 signal output weightedAvgPrice; // Actually total value (avoid division in ZK)
 signal output numWinners;       // Number of winning bidders
+signal output winnerBitmask;    // Bitmask indicating winners (bit i = 1 if bid i wins)
 ```
+
+### **Winner Validation Logic**
+
+The circuit implements **triple constraint validation** for determining winning bids:
+
+#### **Three-Constraint Winner Determination**
+```circom
+// 1. Quantity Constraint: Bid fits within remaining token capacity
+canFit[i] = LessThan(252);
+canFit[i].in[0] <== cumulativeFill[i] + sortedAmounts[i];
+canFit[i].in[1] <== makerMaximumAmount + 1;  // LessThan(a, b+1) implements a ≤ b
+
+// 2. Price Constraint: Bid meets minimum price requirement
+priceOK[i] = GreaterEqThan(252);
+priceOK[i].in[0] <== sortedPrices[i];
+priceOK[i].in[1] <== makerMinimumPrice;
+
+// 3. Non-Zero Constraint: Prevent zero-amount bids from being winners
+nonZero[i] = GreaterThan(252);
+nonZero[i].in[0] <== sortedAmounts[i];
+nonZero[i].in[1] <== 0;
+
+// Winner if ALL constraints satisfied (using quadratic constraint breakdown)
+constraint1[i] <== canFit[i].out * priceOK[i].out;           // First multiplication
+isWinner[i] <== constraint1[i] * nonZero[i].out;             // Second multiplication
+```
+
+#### **Critical Design Decision: Non-Zero Amount Requirement**
+
+**Problem Solved**: Zero-amount bids were incorrectly being treated as winners.
+
+**Business Logic**: A bid with `amount = 0` should never win, regardless of price.
+
+**Technical Implementation**:
+- **Without non-zero constraint**: `price=0, amount=0` would pass both price and quantity checks
+- **With non-zero constraint**: Zero-amount bids are explicitly excluded from winning
+- **Quadratic Breakdown**: Triple multiplication `A * B * C` broken into `(A * B) * C` to maintain circuit efficiency
+
+#### **Winner Bitmask Calculation**
+```circom
+// Calculate bitmask: sum of winnerBits[i] * 2^i
+bitmaskSum[i+1] <== bitmaskSum[i] + winnerBits[i] * (2 ** i);
+winnerBitmask <== bitmaskSum[N];
+```
+
+**Purpose**: Provides efficient on-chain representation of which bids won the auction.
 
 ---
 

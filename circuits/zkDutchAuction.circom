@@ -21,7 +21,7 @@ template SortingVerifier(N) {
     // Verify sorting: each element >= next element (descending order for Dutch auction)
     component geq[N-1];
     for (var i = 0; i < N-1; i++) {
-        geq[i] = GreaterEqThan(128); // Increased from 64 to handle larger values
+        geq[i] = GreaterEqThan(252); // Maximum supported by circomlib
         geq[i].in[0] <== sortedPrices[i];
         geq[i].in[1] <== sortedPrices[i+1];
         geq[i].out === 1; // Must be true for valid sorting
@@ -111,12 +111,12 @@ template zkDutchAuction(N) {
     
     for (var i = 0; i < N; i++) {
         // Check if this bid fits within remaining token capacity
-        canFit[i] = LessThan(128);  // Increased from 64 to handle larger values
+        canFit[i] = LessThan(252);  // Maximum supported by circomlib
         canFit[i].in[0] <== cumulativeFill[i] + sortedAmounts[i];
         canFit[i].in[1] <== makerMaximumAmount + 1;  // +1 for strict less-than
         
         // Check if price meets minimum requirement per token
-        priceOK[i] = GreaterEqThan(128);  // Increased from 64 to handle larger values
+        priceOK[i] = GreaterEqThan(252);  // Maximum supported by circomlib
         priceOK[i].in[0] <== sortedPrices[i];
         priceOK[i].in[1] <== makerMinimumPrice;
         

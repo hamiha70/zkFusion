@@ -1,0 +1,218 @@
+# Social Media Capture Configuration
+# This file defines what content to capture from Discord and YouTube
+
+discord:
+  # Global Discord capture settings
+  rate_limit_delay: 2.5  # Seconds between requests (conservative)
+  
+  # No date filtering - using message limits only (Discord fetches most recent first)
+  
+  # Discord threads/channels to monitor from ETHGlobal Unite
+  channels:
+    # High Priority - Core hackathon channels (LARGE LIMITS, NO DATE FILTER)
+    - name: "ETHGlobal Partner 1inch"
+      guild_id: null  # Will be auto-detected
+      channel_id: "798164802438561832"
+      thread_id: null
+      last_message_id: null
+      enabled: true
+      max_history: 3000  # Large limit for most important channel
+      description: "1inch partner channel - key for hackathon"
+      priority: "high"
+      
+    - name: "ETHGlobal Project Check-ins"
+      guild_id: null
+      channel_id: "885830009930010625"
+      thread_id: null
+      last_message_id: null
+      enabled: true
+      max_history: 2000  # Large limit for project updates
+      description: "Project updates and progress sharing"
+      priority: "high"
+      
+    - name: "ETHGlobal Unite DeFi Chat"
+      guild_id: null
+      channel_id: "1385673870941618348"
+      thread_id: null
+      last_message_id: null
+      enabled: true
+      max_history: 1000  # Already working well
+      description: "Main Unite DeFi discussion channel"
+      priority: "high"
+      
+    - name: "ETHGlobal Find A Team"
+      guild_id: null
+      channel_id: "1350180878436925560"
+      thread_id: null
+      last_message_id: null
+      enabled: true
+      max_history: 800  # Already working well
+      description: "Team formation and networking"
+      priority: "high"
+    
+    # Medium Priority - Blockchain support channels (SAME AS WORKING)
+    - name: "ETHGlobal Support NEAR"
+      guild_id: null
+      channel_id: "1113948380087975957"
+      thread_id: null
+      last_message_id: null
+      enabled: true
+      max_history: 500  # Keep working settings
+      description: "NEAR Protocol technical support"
+      priority: "medium"
+      
+    - name: "ETHGlobal Support Tezos Etherlink"
+      guild_id: null
+      channel_id: "1396941234052010014"
+      thread_id: null
+      last_message_id: null
+      enabled: true
+      max_history: 500  # Keep working settings
+      description: "Tezos and Etherlink technical support"
+      priority: "medium"
+      
+    - name: "ETHGlobal Support Starknet"
+      guild_id: null
+      channel_id: "1128036282820468807"
+      thread_id: null
+      last_message_id: null
+      enabled: true
+      max_history: 400  # Keep working settings
+      description: "Starknet technical support"
+      priority: "medium"
+      
+    - name: "ETHGlobal Support Aptos"
+      guild_id: null
+      channel_id: "1398287364979429489"
+      thread_id: null
+      last_message_id: null
+      enabled: true
+      max_history: 400  # Keep working settings
+      description: "Aptos technical support"
+      priority: "medium"
+      
+    # Lower Priority - Other blockchain supports (SAME AS WORKING)
+    - name: "ETHGlobal Support ICP"
+      guild_id: null
+      channel_id: "1397956408514969740"
+      thread_id: null
+      last_message_id: null
+      enabled: true
+      max_history: 300  # Keep working settings
+      description: "Internet Computer Protocol support"
+      priority: "low"
+      
+    - name: "ETHGlobal Support Monad"
+      guild_id: null
+      channel_id: "1397252653310021703"
+      thread_id: null
+      last_message_id: null
+      enabled: true
+      max_history: 300  # Keep working settings
+      description: "Monad technical support"
+      priority: "low"
+      
+    - name: "ETHGlobal Support Polkadot"
+      guild_id: null
+      channel_id: "1398010216636874843"
+      thread_id: null
+      last_message_id: null
+      enabled: true
+      max_history: 300  # Keep working settings
+      description: "Polkadot technical support"
+      priority: "low"
+      
+    - name: "ETHGlobal Support Stellar"
+      guild_id: null
+      channel_id: "1397252819592941568"
+      thread_id: null
+      last_message_id: null
+      enabled: true
+      max_history: 300  # Keep working settings
+      description: "Stellar technical support"
+      priority: "low"
+      
+    - name: "ETHGlobal Support SUI"
+      guild_id: null
+      channel_id: "1397926751170072607"
+      thread_id: null
+      last_message_id: null
+      enabled: true
+      max_history: 300  # Keep working settings
+      description: "SUI technical support"
+      priority: "low"
+      
+    - name: "ETHGlobal Support TON"
+      guild_id: null
+      channel_id: "1398007833097670716"
+      thread_id: null
+      last_message_id: null
+      enabled: true
+      max_history: 300  # Keep working settings
+      description: "TON technical support"
+      priority: "low"
+      
+    - name: "ETHGlobal Support TRON"
+      guild_id: null
+      channel_id: "1397999202432188570"
+      thread_id: null
+      last_message_id: null
+      enabled: true
+      max_history: 300  # Keep working settings
+      description: "TRON technical support"
+      priority: "low"
+
+youtube:
+  # Global settings for YouTube capture
+  rate_limit_delay: 1.0  # Seconds between requests
+  default_languages: ["en"]
+  
+  # YouTube videos to capture transcripts from
+  videos:
+    - name: "Owen Hassall - Building DeFi on NEAR"
+      url: "https://www.youtube.com/watch?v=bcDwk66o_AY"
+      languages: ["en"]
+      enabled: true
+      description: "Owen Hassall discusses building DeFi applications on NEAR Protocol - ETHGlobal Unite 2025"
+      last_updated: null
+      
+    - name: "Adebola Adeniran - Tokenize Real World Assets"
+      url: "https://www.youtube.com/watch?v=UcLIaFUUmkg"
+      languages: ["en"]
+      enabled: true
+      description: "Adebola Adeniran on tokenizing real world assets on Etherlink - ETHGlobal Unite 2025"
+      last_updated: null
+      
+    - name: "1inch - Limit Orders"
+      url: "https://www.youtube.com/watch?v=TO_J_DULUVg"
+      languages: ["en"]
+      enabled: true
+      description: "1inch protocol presentation on Limit Orders functionality - ETHGlobal Unite 2025"
+      last_updated: null
+      
+    - name: "1inch - Cross-chain Swaps Fusion"
+      url: "https://www.youtube.com/watch?v=EnHov0tCalU"
+      languages: ["en"]
+      enabled: true
+      description: "1inch protocol presentation on Cross-chain Swaps and Fusion technology - ETHGlobal Unite 2025"
+      last_updated: null
+      
+    - name: "Mitko Tschimev - All for DeFi United by 1inch"
+      url: "https://www.youtube.com/watch?v=W2xCf-TCnwc"
+      languages: ["en"]
+      enabled: true
+      description: "Mitko Tschimev presents on DeFi ecosystem united by 1inch protocol - ETHGlobal Unite 2025"
+      last_updated: null
+      
+    - name: "Kartik Talwar - Unite DeFi Kickoff"
+      url: "https://www.youtube.com/watch?v=DKQJlzJuTqQ"
+      languages: ["en"]
+      enabled: true
+      description: "Kartik Talwar kicks off the Unite DeFi 2025 hackathon - Opening ceremony and introduction"
+      last_updated: null
+
+# Global settings
+global:
+  output_format: "markdown"  # "markdown" or "json"
+  include_metadata: true
+  log_level: "INFO" 

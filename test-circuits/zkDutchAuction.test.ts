@@ -127,18 +127,21 @@ describe('zkDutchAuction Circuit', function() {
       console.log('  makerMaximumAmount:', input.makerMaximumAmount);
 
       const witness = await circuit.calculateWitness(input);
-      const outputs = await circuit.getOutput(witness);
       
-      console.log('🎯 CIRCUIT OUTPUTS:');
-      console.log('  totalFill:', outputs.totalFill);
-      console.log('  weightedAvgPrice:', outputs.weightedAvgPrice);
-      console.log('  numWinners:', outputs.numWinners);
+      // Define expected outputs
+      const expectedOutput = {
+        totalFill: 450n, // 100 + 150 + 200
+        numWinners: 3n,
+        weightedAvgPrice: 340000n // 1000*100 + 800*150 + 600*200 = 100000 + 120000 + 120000
+      };
       
-      // Verify outputs (winnerBitmask removed - info available in originalWinnerBits)
-      expect(outputs.totalFill).to.equal(450n); // 100 + 150 + 200
-      expect(outputs.numWinners).to.equal(3n);
-      
-      console.log('✅ Sorted input test passed!');
+      try {
+        await circuit.expectPass(input, expectedOutput);
+        console.log('✅ Sorted input test passed!');
+      } catch (error) {
+        console.error('❌ Sorted input test failed:', error);
+        throw error;
+      }
     });
 
     // Remove the problematic unsorted test for now
@@ -240,19 +243,15 @@ describe('zkDutchAuction Circuit', function() {
 
       try {
         const witness = await circuit.calculateWitness(input);
-        const outputs = await circuit.getOutput(witness);
         
-        console.log('🎯 CIRCUIT OUTPUTS:');
-        console.log('  totalFill:', outputs.totalFill);
-        console.log('  numWinners:', outputs.numWinners);
+        // Define expected outputs
+        const expectedOutput = {
+          totalFill: 450n, // 100+150+200 (first 3 sorted bids)
+          numWinners: 3n,
+          weightedAvgPrice: 340000n // 1000*100 + 800*150 + 600*200 = 340000
+        };
         
-        // Expected outputs:
-        // totalFill: 450n (100+150+200)
-        // numWinners: 3n  
-        // originalWinnerBits: [1,1,0,1,0,0,0,0] (positions 0,1,3 in original order)
-        expect(outputs.totalFill).to.equal(450n);
-        expect(outputs.numWinners).to.equal(3n);
-        
+        await circuit.expectPass(input, expectedOutput);
         console.log('✅ Unsorted input test PASSED! Circuit fix successful!');
       } catch (error) {
         console.log('❌ Test failed with error:');

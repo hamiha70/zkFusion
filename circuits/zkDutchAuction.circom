@@ -19,6 +19,10 @@ template SortingVerifier(N) {
     signal input originalPrices[N];
     signal input originalAmounts[N];
     
+    // Winner bits verification (same permutation pattern)
+    signal input sortedWinnerBits[N];    // Winner bits in sorted order (private)
+    signal input originalWinnerBits[N];  // Winner bits in original order (public)
+    
     // Verify sorting: each element >= next element (descending order for Dutch auction)
     component geq[N-1];
     for (var i = 0; i < N-1; i++) {
@@ -29,13 +33,15 @@ template SortingVerifier(N) {
     }
     
     // Verify permutation correctness - declare all signals/components at template level
-    signal priceSum[N][N+1];    // [position][accumulator_step]
-    signal amountSum[N][N+1];   // [position][accumulator_step]
-    component eq[N][N];         // [position][comparison_index]
+    signal priceSum[N][N+1];      // [position][accumulator_step]
+    signal amountSum[N][N+1];     // [position][accumulator_step]
+    signal winnerBitSum[N][N+1];  // [position][accumulator_step] - for winner bits
+    component eq[N][N];           // [position][comparison_index]
     
     for (var i = 0; i < N; i++) {
         priceSum[i][0] <== 0;
         amountSum[i][0] <== 0;
+        winnerBitSum[i][0] <== 0;  // Initialize winner bit accumulator
         
         for (var j = 0; j < N; j++) {
             eq[i][j] = IsEqual();
@@ -45,11 +51,13 @@ template SortingVerifier(N) {
             // Use selector to pick the right original value
             priceSum[i][j+1] <== priceSum[i][j] + eq[i][j].out * originalPrices[j];
             amountSum[i][j+1] <== amountSum[i][j] + eq[i][j].out * originalAmounts[j];
+            winnerBitSum[i][j+1] <== winnerBitSum[i][j] + eq[i][j].out * originalWinnerBits[j];
         }
         
         // The selected value should equal the sorted value
         sortedPrices[i] === priceSum[i][N];
         sortedAmounts[i] === amountSum[i][N];
+        sortedWinnerBits[i] === winnerBitSum[i][N];  // Verify winner bits permutation
     }
 }
 
@@ -61,16 +69,17 @@ template zkDutchAuction(N) {
     signal input bidderAddresses[N];  // Changed from string to field element representation
     
     // Private inputs (sorting verification)
-    signal input sortedPrices[N];    // Bids sorted by price (descending)
-    signal input sortedAmounts[N];   // Corresponding amounts
-    signal input sortedIndices[N];   // Mapping from sorted position to original position
-    signal input winnerBits[N];      // Individual winner bits (0 or 1) instead of bitmask
+    signal input sortedPrices[N];       // Bids sorted by price (descending)
+    signal input sortedAmounts[N];      // Corresponding amounts
+    signal input sortedIndices[N];      // Mapping from sorted position to original position
+    signal input sortedWinnerBits[N];   // Winner bits in sorted order (private)
     
     // Public inputs (from commitment contract)
     signal input commitments[N];              // Poseidon hashes of (price, amount, bidderAddress, contractAddress)
     signal input commitmentContractAddress;   // Address of the commitment contract
     signal input makerMinimumPrice;           // Minimum acceptable price per token
     signal input makerMaximumAmount;          // Maximum tokens to sell
+    signal input originalWinnerBits[N];       // Winner bits in original order (public)
     
     // Outputs
     signal output totalFill;           // Total amount of tokens sold
@@ -96,6 +105,8 @@ template zkDutchAuction(N) {
     sortingVerifier.sortedIndices <== sortedIndices;
     sortingVerifier.originalPrices <== bidPrices;
     sortingVerifier.originalAmounts <== bidAmounts;
+    sortingVerifier.sortedWinnerBits <== sortedWinnerBits;
+    sortingVerifier.originalWinnerBits <== originalWinnerBits;
     
     // 3. Calculate auction results using sorted bids with dual constraints
     signal cumulativeFill[N+1];
@@ -160,14 +171,14 @@ template zkDutchAuction(N) {
         // Count winners
         winnerCount[i+1] <== winnerCount[i] + isWinner[i];
         
-        // Validate that winnerBits[i] matches isWinner[i]
+        // Validate that sortedWinnerBits[i] matches isWinner[i] (both in sorted order)
         bitValidator[i] = IsEqual();
-        bitValidator[i].in[0] <== winnerBits[i];
+        bitValidator[i].in[0] <== sortedWinnerBits[i];
         bitValidator[i].in[1] <== isWinner[i];
         bitValidator[i].out === 1; // Bit i must equal isWinner[i]
         
-        // Calculate bitmask: sum of winnerBits[i] * 2^i
-        bitmaskSum[i+1] <== bitmaskSum[i] + winnerBits[i] * (2 ** i);
+        // Calculate bitmask using originalWinnerBits (public output should reflect original order)
+        bitmaskSum[i+1] <== bitmaskSum[i] + originalWinnerBits[i] * (2 ** i);
     }
     
     numWinners <== winnerCount[N];

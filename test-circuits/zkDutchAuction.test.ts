@@ -133,12 +133,10 @@ describe('zkDutchAuction Circuit', function() {
       console.log('  totalFill:', outputs.totalFill);
       console.log('  weightedAvgPrice:', outputs.weightedAvgPrice);
       console.log('  numWinners:', outputs.numWinners);
-      console.log('  winnerBitmask:', outputs.winnerBitmask);
       
-      // Verify outputs
+      // Verify outputs (winnerBitmask removed - info available in originalWinnerBits)
       expect(outputs.totalFill).to.equal(450n); // 100 + 150 + 200
       expect(outputs.numWinners).to.equal(3n);
-      expect(outputs.winnerBitmask).to.equal(7n); // Binary 111 = 7
       
       console.log('✅ Sorted input test passed!');
     });
@@ -247,15 +245,13 @@ describe('zkDutchAuction Circuit', function() {
         console.log('🎯 CIRCUIT OUTPUTS:');
         console.log('  totalFill:', outputs.totalFill);
         console.log('  numWinners:', outputs.numWinners);
-        console.log('  winnerBitmask:', outputs.winnerBitmask);
         
         // Expected outputs:
         // totalFill: 450n (100+150+200)
         // numWinners: 3n  
-        // winnerBitmask: 11n (binary 1011 = positions 0,1,3 in original order)
+        // originalWinnerBits: [1,1,0,1,0,0,0,0] (positions 0,1,3 in original order)
         expect(outputs.totalFill).to.equal(450n);
         expect(outputs.numWinners).to.equal(3n);
-        expect(outputs.winnerBitmask).to.equal(11n); // Binary 1011 = positions 0,1,3 in original order
         
         console.log('✅ Unsorted input test PASSED! Circuit fix successful!');
       } catch (error) {

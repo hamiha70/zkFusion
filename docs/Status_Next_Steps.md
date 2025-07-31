@@ -8,7 +8,8 @@
    - Poseidon hash verification for bid commitments
    - Sorting verification using permutation proofs
    - Dutch auction winner calculation (capacity + price constraints)
-   - Output generation (totalFill, numWinners, winnerBitmask, weightedAvgPrice)
+   - Output generation (totalFill, numWinners, weightedAvgPrice)
+   - **NEW**: Optimized output - removed redundant winnerBitmask (info available in originalWinnerBits)
 
 2. **Test Coverage**: Comprehensive test suite covers:
    - ✅ Sorted inputs (identity permutation)

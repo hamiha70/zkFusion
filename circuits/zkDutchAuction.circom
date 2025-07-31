@@ -85,7 +85,6 @@ template zkDutchAuction(N) {
     signal output totalFill;           // Total amount of tokens sold
     signal output weightedAvgPrice;    // Actually total value (contract calculates weighted avg)
     signal output numWinners;          // Number of winning bids
-    signal output winnerBitmask;       // Bitmask indicating winners (bit i = 1 if bid i wins)
     
     // 1. Verify commitments using 4-input Poseidon hash
     component hasher[N];
@@ -158,13 +157,11 @@ template zkDutchAuction(N) {
     // Contract will calculate weightedAvgPrice = totalValue / totalFill
     weightedAvgPrice <== cumulativeValue[N];
     
-    // 5. Count winners and validate bitmask
+    // 5. Count winners and validate winner bits
     signal winnerCount[N+1];
-    signal bitmaskSum[N+1];  // Accumulate bitmask value
     winnerCount[0] <== 0;
-    bitmaskSum[0] <== 0;
     
-    // Bitmask validation components
+    // Winner validation components
     component bitValidator[N];
     
     for (var i = 0; i < N; i++) {
@@ -176,13 +173,9 @@ template zkDutchAuction(N) {
         bitValidator[i].in[0] <== sortedWinnerBits[i];
         bitValidator[i].in[1] <== isWinner[i];
         bitValidator[i].out === 1; // Bit i must equal isWinner[i]
-        
-        // Calculate bitmask using originalWinnerBits (public output should reflect original order)
-        bitmaskSum[i+1] <== bitmaskSum[i] + originalWinnerBits[i] * (2 ** i);
     }
     
     numWinners <== winnerCount[N];
-    winnerBitmask <== bitmaskSum[N];
 }
 
 // Template exported for use by test wrapper

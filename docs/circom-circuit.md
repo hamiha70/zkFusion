@@ -37,8 +37,9 @@ signal input makerMaximumAmount;          // Maximum tokens to sell
 signal output totalFill;          // Total tokens sold
 signal output weightedAvgPrice;   // Total value (price * amount sum)
 signal output numWinners;         // Number of winning bids
-signal output winnerBitmask;      // Packed winner bits (2^i sum)
 ```
+
+**Note**: `winnerBitmask` was removed as it's redundant with `originalWinnerBits`. External systems can compute the bitmask if needed: `bitmask = sum(originalWinnerBits[i] * 2^i)`
 
 ## Circuit Logic Flow
 

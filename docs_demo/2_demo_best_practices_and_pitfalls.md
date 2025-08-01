@@ -33,4 +33,58 @@
 
 1.  **Gas Issues within `staticcall` (FEASIBILITY CHECKED):**
     *   **Problem:** The `getTakingAmount` function is executed via `staticcall`, which has gas limits.
-    *   **Your Solution (VERIFIED):** Your `zkProof-Gas-Cost-Time-estimation.md` estimates proof verification at **~350,000 gas**. The EVM `staticcall` opcode can receive almost all of the gas from the parent call (millions of gas, governed by the 63/64 rule). **Your gas cost is well within this limit. This is feasible.** Mentioning this analysis in your demo will impress the judges. 
+    *   **Your Solution (VERIFIED):** Your `zkProof-Gas-Cost-Time-estimation.md` estimates proof verification at **~350,000 gas**. The EVM `staticcall` opcode can receive almost all of the gas from the parent call (millions of gas, governed by the 63/64 rule). **Your gas cost is well within this limit. This is feasible.** Mentioning this analysis in your demo will impress the judges.
+
+---
+
+## 🚨 **3. CRITICAL IMPLEMENTATION PITFALL: Circom Version Compatibility**
+
+### **⚠️ THE TRAP - Poseidon Hash Mismatches**
+
+**DISCOVERED:** August 1, 2025  
+**SEVERITY:** Critical - Blocks all ZK proof generation  
+**ROOT CAUSE:** Circom compiler version incompatibility affecting Poseidon hash functions
+
+### **The Problem:**
+- **`npx circom`** uses deprecated version **0.5.46** (JavaScript-based, deprecated)
+- **`circom`** uses current version **2.2.2** (Rust-based, active)
+- **Different Poseidon implementations** produce completely different hashes
+- **JavaScript libraries** like `circomlibjs` are compatible with circom 0.5.x, NOT 2.x
+
+### **Symptoms:**
+```
+Error: Assert Failed. Error in template zkDutchAuction_81 line: 98
+```
+- Circuit compiles successfully but witness generation fails
+- Hash verification constraints fail in the circuit
+- Tests pass for JavaScript logic but fail for circuit integration
+
+### **Evidence:**
+```javascript
+// Test inputs: [1, 2, 3, 4]
+circomlibjs result:  22fa2af8c56f9d8481cb75a238d9e4f001525256132e1365bb572e22fc5dfdd5
+poseidon-lite result: 299c867db6c1fdd79dcefa40e4510b9837e60ebb1ce0663dbaa525df65250465 ✅
+Reference expected:   299c867db6c1fdd79dcefa40e4510b9837e60ebb1ce0663dbaa525df65250465 ✅
+```
+
+### **The Solution:**
+
+1. **NEVER use `npx circom`** - it uses the deprecated 0.5.46 version
+2. **ALWAYS use `circom` directly** - the Rust-based 2.x.x version
+3. **Use `poseidon-lite` library** for JavaScript hashing, NOT `circomlibjs`
+4. **Update all hash utilities** to use compatible libraries
+
+### **Prevention Checklist:**
+- [ ] Verify `circom --version` shows 2.x.x (not 0.5.x)
+- [ ] Never use `npx circom` in scripts or commands
+- [ ] Use `poseidon-lite` for all JavaScript Poseidon hashing
+- [ ] Test hash compatibility between JavaScript and circuit
+- [ ] Document compiler versions in your setup instructions
+
+### **Files to Update:**
+- **Compilation commands:** Use `circom` not `npx circom`
+- **Hash utilities:** Replace `circomlibjs` with `poseidon-lite`
+- **Input generators:** Ensure consistent hash function usage
+- **Cursor rules:** Document the correct compilation approach
+
+**This pitfall cost multiple hours of debugging and could have been prevented with proper version documentation.** 

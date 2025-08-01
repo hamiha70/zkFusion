@@ -2,8 +2,11 @@
  * Hash Utilities for zkFusion
  * 
  * Provides hash functions for commitment generation and verification.
- * Currently uses mock implementation - will be replaced with real Poseidon later.
+ * Uses poseidon-lite for compatibility with circom 2.x circuits.
  */
+
+// Real Poseidon hash implementation using poseidon-lite (FIXED)
+const { poseidon4 } = require('poseidon-lite');
 
 // import type { Bid } from './types';
 
@@ -11,7 +14,7 @@
  * Mock Poseidon(4) hash calculation
  * 
  * For testing, we use a simple deterministic hash that combines all inputs.
- * In production, this will be replaced with actual Poseidon hash from circomlibjs.
+ * In production, this will be replaced with actual Poseidon hash from poseidon-lite.
  * 
  * @param price Bid price in wei
  * @param amount Bid amount in wei  
@@ -60,21 +63,16 @@ function generateCommitments(bids: any[], contractAddress: string): bigint[] {
   return bids.map(bid => generateCommitment(bid, contractAddress));
 }
 
-/**
- * Real Poseidon hash implementation using poseidon-lite
- */
-const { poseidon4 } = require('poseidon-lite');
-
 function realPoseidonHash(inputs: bigint[]): bigint {
-  // Use poseidon-lite which is compatible with our circuit
-  const result = poseidon4(inputs);
-  return BigInt(result);
+  // FIXED: poseidon-lite already returns BigInt directly
+  // No conversion needed - just return the result
+  return poseidon4(inputs);
 }
 
 /**
  * Generate commitment hash using real Poseidon(4) - FIXED TO MATCH CIRCUIT
  */
-async function generateCommitmentReal(bid: any, contractAddress: string): Promise<bigint> {
+function generateCommitmentReal(bid: any, contractAddress: string): bigint {
   // FIXED: Use raw BigInt addresses (no conversion) to match circuit expectations
   const bidderBigInt = BigInt(bid.bidderAddress);
   const contractBigInt = BigInt(contractAddress);
@@ -86,7 +84,7 @@ async function generateCommitmentReal(bid: any, contractAddress: string): Promis
     bidderBigInt,        // bidder address (raw BigInt)
     contractBigInt       // contract address (raw BigInt)
   ];
-  return await realPoseidonHash(inputs);
+  return realPoseidonHash(inputs);
 } 
 
 // CommonJS exports

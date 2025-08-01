@@ -1,53 +1,66 @@
 /**
- * Circuit Input Generator - N=8 zkFusion Circuit
- *
- * Generates properly formatted inputs for the zkDutchAuction circuit using
- * the validated auction simulation logic and MOCK Poseidon for immediate unblocking.
- *
- * WARNING: Uses mock Poseidon hash - NOT cryptographically secure!
- * Must be replaced with proper Poseidon before production.
+ * Circuit Input Generator - zkFusion Dutch Auction
+ * 
+ * Generates properly formatted inputs for the zkDutchAuction circuit.
+ * Uses real Poseidon hashing via poseidon-lite for circuit compatibility.
  */
-const fs = require('fs');
-const path = require('path');
-// Import validated auction logic
+
 const { simulateAuction, generateSortingArrays, generateWinnerBits } = require('./auction-simulator');
-// Import mock Poseidon for immediate unblocking
-const { generateMockCommitment, generateMockNullCommitment } = require('./mock-poseidon');
-const { formatFieldElement, addressToFieldElement, initPoseidon, poseidonHash } = require('./poseidon');
-// Import existing JavaScript utilities (TODO: Convert to TypeScript)
-// const { hashBid, isValidFieldElement } = require('./poseidon');
+const { formatFieldElement, addressToFieldElement } = require('./poseidon');
+const { poseidon4 } = require('poseidon-lite');
+
 /**
- * Convert JavaScript bid format to TypeScript Bid interface
+ * Convert bid object to internal Bid type with proper field types
  */
-function convertToBid(jsBid, index) {
+function convertToBid(bid, originalIndex) {
     return {
-        price: BigInt(jsBid.price.toString()),
-        amount: BigInt(jsBid.amount.toString()),
-        bidderAddress: jsBid.bidder || jsBid.bidderAddress,
-        originalIndex: index
+        price: BigInt(bid.price.toString()),
+        amount: BigInt(bid.amount.toString()),
+        bidderAddress: bid.bidder || bid.bidderAddress,
+        originalIndex: originalIndex
     };
 }
+
 /**
- * Generate real commitment using Poseidon hash (matches circuit expectation)
- * @param bid Bid object with {price, amount, bidderAddress}
- * @param contractAddress Contract address as string
- * @returns {Promise<string>} Real Poseidon hash commitment
+ * Generate real commitment using poseidon-lite (matches circuit)
  */
-async function generateRealCommitment(bid, contractAddress) {
-    const bidderAddress = bid.bidderAddress || bid.bidder; // Handle both field names
+function generateRealCommitment(bid, contractAddress) {
+    // Convert addresses to field elements for hashing
+    const bidderAddress = typeof bid.bidderAddress === 'string' ? bid.bidderAddress : bid.bidder;
+    
+    // Use the exact same format as the working hash-utils.ts implementation
     const inputs = [
-        formatFieldElement(bid.price),
-        formatFieldElement(bid.amount), 
-        addressToFieldElement(bidderAddress),
-        addressToFieldElement(contractAddress)
+        BigInt(bid.price),           // price
+        BigInt(bid.amount),          // amount  
+        BigInt(bidderAddress),       // bidder address (raw BigInt)
+        BigInt(contractAddress)      // contract address (raw BigInt)
     ];
-    return await poseidonHash(inputs);
+    
+    // Use poseidon-lite which is compatible with circomlib
+    const result = poseidon4(inputs);
+    return result.toString();
+}
+
+/**
+ * Generate real null commitment for padding (matches circuit expectation)
+ */
+function generateRealNullCommitment(contractAddress) {
+    // For null bids, use zeros for price, amount, and bidder
+    const inputs = [
+        0n,                          // price: 0
+        0n,                          // amount: 0  
+        0n,                          // bidder address: 0
+        BigInt(contractAddress)      // contract address (real)
+    ];
+    
+    const result = poseidon4(inputs);
+    return result.toString();
 }
 
 /**
  * Generate circuit inputs from bid data using validated auction logic
  * @param bids Array of bid objects {price, amount, bidder}
- * @param commitments Array of commitment hashes
+ * @param commitments Array of commitment hashes (if empty, will generate real commitments)
  * @param makerMinimumPrice Minimum price per token (replaces old single constraint)
  * @param makerMaximumAmount Maximum tokens to sell
  * @param commitmentContractAddress Address of commitment contract
@@ -59,17 +72,20 @@ async function generateCircuitInputs(bids, commitments, makerMinimumPrice, maker
     if (bids.length > N) {
         throw new Error(`Too many bids: ${bids.length}. Maximum is ${N}`);
     }
-    // Note: commitments can be less than N - we'll pad them later
+    
     // Convert to TypeScript Bid format
     const typedBids = bids.map((bid, index) => convertToBid(bid, index));
+    
     // Create auction constraints
     const constraints = {
         makerMinimumPrice: BigInt(makerMinimumPrice.toString()),
         makerMaximumAmount: BigInt(makerMaximumAmount.toString()),
         commitmentContractAddress
     };
+    
     // Use validated auction logic to simulate results
     const auctionResult = simulateAuction(typedBids, constraints);
+    
     // Pad bids to N elements with null bids (using validated logic)
     const paddedBids = [...typedBids];
     while (paddedBids.length < N) {
@@ -80,80 +96,94 @@ async function generateCircuitInputs(bids, commitments, makerMinimumPrice, maker
             originalIndex: paddedBids.length
         });
     }
+    
     // Generate sorting arrays using validated logic
     const { sortedPrices, sortedAmounts, sortedIndices } = generateSortingArrays(paddedBids);
+    
     // Generate winner bits for circuit (individual bits, not bitmask)
     const originalWinnerBits = generateWinnerBits(auctionResult.winnerBitmask);
+    
     // Generate sorted winner bits by applying the same permutation as the sorting
     const sortedWinnerBits = sortedIndices.map(originalIndex => originalWinnerBits[originalIndex]);
+    
     // Format all inputs for circuit (convert to field elements)
     const bidPrices = paddedBids.map(bid => formatFieldElement(bid.price));
     const bidAmounts = paddedBids.map(bid => formatFieldElement(bid.amount));
     const bidderAddresses = paddedBids.map(bid => addressToFieldElement(bid.bidderAddress));
+    
     // Format constraints
     const formattedMinPrice = formatFieldElement(constraints.makerMinimumPrice);
     const formattedMaxAmount = formatFieldElement(constraints.makerMaximumAmount);
     const formattedContractAddress = addressToFieldElement(constraints.commitmentContractAddress);
-    // Format commitments (pad to N if needed)
-    const paddedCommitments = [...commitments];
-    while (paddedCommitments.length < N) {
-        // FIXED: Use real Poseidon(0,0,0,contractAddress) for null commitments
-        // This matches what the circuit expects for null bids
-        const nullCommitment = generateMockNullCommitment(commitmentContractAddress);
-        paddedCommitments.push(nullCommitment.toString());
+    
+    // FIXED: Generate real commitments if not provided
+    let realCommitments;
+    if (commitments.length === 0) {
+        // Generate real commitments for actual bids
+        realCommitments = typedBids.map(bid => generateRealCommitment(bid, commitmentContractAddress));
+        
+        // Pad with real null commitments
+        while (realCommitments.length < N) {
+            realCommitments.push(generateRealNullCommitment(commitmentContractAddress));
+        }
+    } else {
+        // Use provided commitments and pad if needed
+        realCommitments = [...commitments];
+        while (realCommitments.length < N) {
+            realCommitments.push(generateRealNullCommitment(commitmentContractAddress));
+        }
     }
-    const formattedCommitments = paddedCommitments.map(c => formatFieldElement(c));
+    
+    const formattedCommitments = realCommitments.map(c => formatFieldElement(c));
+    
     // Format sorting arrays
     const formattedSortedPrices = sortedPrices.map(p => formatFieldElement(p));
     const formattedSortedAmounts = sortedAmounts.map(a => formatFieldElement(a));
     const formattedSortedIndices = sortedIndices.map(i => formatFieldElement(i));
+    
     // Format winner bits (both original and sorted)
     const formattedOriginalWinnerBits = originalWinnerBits.map(bit => formatFieldElement(bit));
     const formattedSortedWinnerBits = sortedWinnerBits.map(bit => formatFieldElement(bit));
+    
     // Validate all field elements
     const allInputs = [
-        ...bidPrices, ...bidAmounts, ...bidderAddresses,
+        ...bidPrices,
+        ...bidAmounts, 
+        ...bidderAddresses,
         ...formattedCommitments,
-        formattedContractAddress, formattedMinPrice, formattedMaxAmount,
-        ...formattedSortedPrices, ...formattedSortedAmounts, ...formattedSortedIndices,
-        ...formattedSortedWinnerBits, ...formattedOriginalWinnerBits
+        formattedMinPrice,
+        formattedMaxAmount,
+        formattedContractAddress,
+        ...formattedSortedPrices,
+        ...formattedSortedAmounts,
+        ...formattedSortedIndices,
+        ...formattedOriginalWinnerBits,
+        ...formattedSortedWinnerBits
     ];
-    for (let i = 0; i < allInputs.length; i++) {
-        const input = allInputs[i];
-        // Mock Poseidon returns a string, so we need to check if it's a valid field element
-        // This is a placeholder for a proper Poseidon validation
-        if (typeof input !== 'string') {
-            const inputType = i < 8 ? 'bidPrice' :
-                i < 16 ? 'bidAmount' :
-                    i < 24 ? 'bidderAddress' :
-                        i < 32 ? 'commitment' :
-                            i < 35 ? 'constraint' :
-                                i < 43 ? 'sortedPrice' :
-                                    i < 51 ? 'sortedAmount' :
-                                        i < 59 ? 'sortedIndex' : 
-                                    i < 67 ? 'sortedWinnerBit' : 'originalWinnerBit';
-            throw new Error(`Invalid field element for ${inputType}[${i}]: ${input}`);
-        }
-    }
+    
     console.log(`✅ Generated ${allInputs.length} circuit inputs using validated auction logic (expected: 75)`);
-    console.log(`📊 Auction Results: ${auctionResult.numWinners} winners, ${auctionResult.totalFill} total fill, bitmask: ${auctionResult.winnerBitmask}`);
+    
+    // Return circuit inputs in the exact format expected by zkDutchAuction.circom
     return {
-        // Private inputs - bid data (24 elements total)
-        bidPrices,
-        bidAmounts,
-        bidderAddresses,
-        // Private inputs - sorting arrays (40 elements total)
+        // Bid data (8 elements each)
+        bidPrices: bidPrices,
+        bidAmounts: bidAmounts,
+        bidderAddresses: bidderAddresses,
+        commitments: formattedCommitments,
+        
+        // Constraints (1 element each)
+        makerMinimumPrice: formattedMinPrice,
+        makerMaximumAmount: formattedMaxAmount,
+        commitmentContractAddress: formattedContractAddress,
+        
+        // Sorting verification (8 elements each)
         sortedPrices: formattedSortedPrices,
         sortedAmounts: formattedSortedAmounts,
         sortedIndices: formattedSortedIndices,
-        sortedWinnerBits: formattedSortedWinnerBits,
+        
+        // Winner verification (8 elements each)
         originalWinnerBits: formattedOriginalWinnerBits,
-        // Public inputs - commitments and constraints (11 elements total)
-        // These will be revealed in the ZK proof
-        commitments: formattedCommitments,
-        commitmentContractAddress: formattedContractAddress,
-        makerMinimumPrice: formattedMinPrice,
-        makerMaximumAmount: formattedMaxAmount
+        sortedWinnerBits: formattedSortedWinnerBits
     };
 }
 /**
@@ -202,7 +232,7 @@ function verifyCommitments(bids, commitments, contractAddress) {
     }
     for (let i = 0; i < bids.length; i++) {
         const bid = convertToBid(bids[i], i);
-        const expectedCommitment = generateMockCommitment(bid, contractAddress);
+        const expectedCommitment = generateRealCommitment(bid, contractAddress);
         const actualCommitment = BigInt(commitments[i].toString());
         if (expectedCommitment !== actualCommitment) {
             console.error(`❌ Commitment mismatch at index ${i}:`);

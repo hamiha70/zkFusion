@@ -1,53 +1,65 @@
-# Gaps & Demo Implementation Roadmap for zkFusion (v1.2 FINAL)
+# Gaps & Demo Implementation Roadmap for zkFusion (v2.0 FINAL)
 
-**Objective:** To provide a prioritized, actionable implementation roadmap based on the **final, correct architecture**.
+**Date:** August 1, 2025
+**Status:** Phase 1 Complete, High-Confidence plan for Phase 2 defined.
+
+**Objective:** To provide a prioritized, actionable implementation roadmap based on our validated analysis of the 1inch Limit Order Protocol.
 
 ---
-##  GAP ANALYSIS: Code vs. Demo Requirements (FINAL)
+## ✅ **Phase 1: Core Logic & Proof Pipeline Validation - COMPLETE**
 
-### **1. ZK Circuit (`zkDutchAuction.circom`)**
-
-*   **GAP 1 (Minor Simplification): 4-Input Hash.**
-    *   **Action:** Update the `hasher` component to be `Poseidon(4)`, removing the `nonce` input.
-    *   **Confidence:** High.
-*   **GAP 2 (Minor Rename):**
-    *   **Action:** Rename the output signal `weightedAvgPrice` to `totalValue`.
-    *   **Confidence:** High.
-*   **GAP 3 (No Code Change): `originalWinnerBits` is Correct.**
-    *   **Action:** No change is needed. The circuit correctly validates the `originalWinnerBits` public input against the internal auction logic, ensuring the prover cannot lie.
-    *   **Confidence:** High.
-
-### **2. On-Chain Contracts**
-
-#### **`zkFusionExecutor.sol`**
-
-*   **GAP 1 (Critical): On-Chain State Verification.**
-    *   **Action:** Create a `verifyAuctionProof` view function that reads the `commitments` array from the `BidCommitment` contract. It must also accept the `originalWinnerBits` array as an argument to construct the full public input list for the `verifier.verifyProof` call.
-    *   **Confidence:** High.
-
-(Other contract gaps remain the same as the previous version)
+-   [x] **Task 1.1 (Circuit):** Circuit logic finalized (4-input Poseidon, `totalValue` output) and recompiled.
+-   [x] **Task 1.2 (Testing):** All 7 core business logic tests in `test-circuits/zkDutchAuction.test.ts` are passing.
+-   [x] **Task 1.3 (Proof Pipeline):** Full Groth16 proof generation and verification confirmed to work in ~5.3 seconds using production artifacts. **95% technical confidence achieved.**
+-   [x] **Task 1.4 (Integration Analysis):** Deep-dive into 1inch LOP contracts and SDK is complete. A clear, code-backed integration path is defined in `docs/LimitOrderProtocol-Analysis-Demo-Insights.md`.
 
 ---
 
-## 🚀 **Implementation Roadmap (FINAL & PRIORITIZED)**
+## 🚀 **Phase 2: On-Chain & Off-Chain Implementation (The Demo)**
 
-The "Risk-First, Validate Early" approach remains the best path.
+This phase implements the demo script and contract interactions based on our validated research.
 
-**Phase 1: Prove the Hardest Parts Work (Est. 1-2 Hours)**
-*   [ ] **Task 1.1 (Circuit):**
-    1.  Update `zkDutchAuction.circom` to use the 4-input Poseidon hash.
-    2.  Rename `weightedAvgPrice` output to `totalValue`.
-    3.  Recompile the circuit, run the trusted setup, and **generate the new `Verifier.sol` contract.** This is a critical step as the public inputs for the verifier will have changed.
-*   [ ] **Task 1.2 (Integration):** Prototype the 1inch LOP extension call in a test script.
+**Priority 1: Contract Refactoring (Backend Foundation)**
+*   [ ] **Task 2.1: Refactor `BidCommitment.sol`**
+    *   Change the `commitments` mapping to a fixed `uint256[8]` array.
+    *   Add a corresponding `address[8]` array for `bidderAddresses`.
+    *   Implement the two-phase `initialize(nullHash, bidders)` function, where the `nullHash` is computed off-chain.
+*   [ ] **Task 2.2: Implement `ZkFusionGetter.sol`**
+    *   Create a new contract `ZkFusionGetter.sol` that implements the `IAmountGetter` interface.
+    *   Implement the `getTakingAmount(Order, extension, ...)` function.
+    *   **Logic:**
+        1.  Decode `proof`, `publicSignals`, and `commitmentContractAddress` from the `extension` bytestring. The first 20 bytes of `extension.takingAmountData` will be this contract's address, and the rest is our data.
+        2.  Call the `zkFusionExecutor.verifyAuctionProof(...)` view function, passing it the decoded data.
+        3.  The `verifyAuctionProof` function will return the `totalTakingAmount`.
+        4.  Return the `totalTakingAmount` from `getTakingAmount`.
+*   [ ] **Task 2.3: Update `zkFusionExecutor.sol`**
+    *   Implement the `verifyAuctionProof(proof, publicSignals, commitmentContractAddress)` **view function**.
+    *   **Logic:**
+        1.  Load the `BidCommitment` contract at the provided address.
+        2.  Read the `commitments` array from it.
+        3.  Construct the full list of public inputs for the verifier (on-chain commitments + `originalWinnerBits` from the proof data).
+        4.  Call `Verifier.verifyProof(...)`.
+        5.  If valid, return the `totalValue` (taking amount) from the public signals. If invalid, revert.
 
-**Phase 2: Wire the Core Flow (Est. 4-5 Hours)**
-*   [ ] **Task 2.1 (Contracts):**
-    1.  Refactor `BidCommitment.sol`.
-    2.  Implement the `verifyAuctionProof` view function in `zkFusionExecutor.sol`, making sure it accepts `originalWinnerBits`.
-    3.  Deploy all contracts in a local test environment.
-*   [ ] **Task 2.2 (Scripting):** Build the minimal, end-to-end `demo.ts` script. The script must first determine the winners off-chain to create the `originalWinnerBits` array before passing it to the prover.
+**Priority 2: Off-Chain Scripting (The Demo Core)**
+*   [ ] **Task 2.4: Create Minimal 1inch LOP Integration Test (`test/1inch-extension-prototype.js`)**
+    *   **Goal:** Create a small, focused Hardhat test to de-risk the most complex part of the `demo.ts` script.
+    *   Use the `@1inch/limit-order-sdk`.
+    *   Create a dummy ZK proof and public signals.
+    *   Implement the `extension` object creation logic as detailed in the analysis document.
+    *   Build and sign a `LimitOrder` with the extension.
+    *   This script will not execute a fill, but will log the final signed order and calldata, proving our off-chain logic is correct.
+*   [ ] **Task 2.5: Build Full `demo.ts` Script**
+    *   Implement the full 4-step demo flow as detailed in `docs_demo/5_demo_script_and_UI.md`.
+    *   Integrate the now-tested LOP extension logic from Task 2.4.
+    *   Use the validated proof generation pipeline from our `test-proof-generation.js` script.
 
-**Phase 3: Polish & Production (Est. 5-7 Hours)**
-*   (Tasks remain the same)
+**Priority 3: Deployment & Final Touches**
+*   [ ] **Task 2.6: Create Deployment Scripts**
+    *   Write Hardhat scripts to deploy `Verifier.sol`, `CommitmentFactory.sol`, `zkFusionExecutor.sol`, and `ZkFusionGetter.sol` to the local forked network.
+*   [ ] **Task 2.7: Build the UI**
+    *   Create the simple, one-page dashboard that calls the functions in `demo.ts`.
 
-**Total Estimated Time: 10-14 Hours** 
+---
+
+**Total Estimated Time: 10-15 Hours** 

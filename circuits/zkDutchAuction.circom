@@ -179,5 +179,5 @@ template zkDutchAuction(N) {
     numWinners <== winnerCount[N];
 }
 
-// Template exported for use by test wrapper
-// Main component is instantiated in circuits/test/zkDutchAuction.circom 
+// Template exported for use by wrapper circuits
+// Main component is instantiated in zkDutchAuction8.circom 

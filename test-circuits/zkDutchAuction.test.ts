@@ -12,32 +12,9 @@ const { describe, it, before } = require('mocha');
 const { expect } = require('chai');
 const { Circomkit } = require('circomkit');
 
-// Helper function to generate proper Poseidon hashes for test inputs
-async function generateTestCommitments(bidPrices: bigint[], bidAmounts: bigint[], bidderAddresses: string[]): Promise<bigint[]> {
-  const { realPoseidonHash } = require('../circuits/utils/hash-utils');
-  const commitments: bigint[] = [];
-  const contractAddress = 123456789n; // Use same address as circuit input!
-  
-  console.log('🔍 HASH GENERATION DEBUG:');
-  console.log('Contract Address:', contractAddress);
-  
-  for (let i = 0; i < bidPrices.length; i++) {
-    const inputs = [bidPrices[i], bidAmounts[i], BigInt(bidderAddresses[i]), contractAddress];
-    console.log(`\n📊 Bid ${i}:`);
-    console.log('  Price:', bidPrices[i]);
-    console.log('  Amount:', bidAmounts[i]);
-    console.log('  Address:', bidderAddresses[i]);
-    console.log('  Address as BigInt:', BigInt(bidderAddresses[i]));
-    console.log('  Inputs to hash:', inputs);
-    
-    const hash = realPoseidonHash(inputs);
-    console.log('  Generated Hash:', hash);
-    commitments.push(BigInt(hash));
-  }
-  
-  console.log('\n🎯 Final Commitments Array:', commitments);
-  return commitments;
-}
+// Import the tested and working utilities
+const { generateCircuitInputs } = require('../circuits/utils/input-generator');
+const { simulateAuction } = require('../circuits/utils/auction-simulator');
 
 describe('zkDutchAuction Circuit', function() {
   let circuit: any;

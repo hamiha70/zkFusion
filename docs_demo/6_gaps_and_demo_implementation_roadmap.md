@@ -18,9 +18,9 @@
 ## Phase 2.0: On-Chain & Off-Chain Implementation (The Demo)
 
 ### Priority 1: Contract Refactoring (Backend Foundation)
-*   **Task 2.1: Refactor `BidCommitment.sol`** - Change mapping to fixed array, add `bidderAddresses` array, implement two-phase `initialize` with off-chain `nullHash`.
+*   **✅ Task 2.1: COMPLETE - BidCommitment.sol Refactored** - Replaced mapping with fixed uint256[8] array, added address[8] bidderAddresses, implemented two-phase initialize() with off-chain nullHash, added direct array access for ZK circuit integration.
 *   **✅ Task 2.2: COMPLETE - ZkFusionGetter.sol Implemented** - Created IAmountGetter interface for 1inch LOP, decodes ZK proof from extension.takingAmountData, verifies through zkFusionExecutor.verifyAuctionProof(), returns totalValue as taking amount.
-*   **Task 2.3: Update `zkFusionExecutor.sol`** - ✅ PARTIAL COMPLETE: Added verifyAuctionProof view function, updated interfaces to uint[3] signals, fixed LOP integration.
+*   **✅ Task 2.3: COMPLETE - zkFusionExecutor.sol Updated** - Added verifyAuctionProof view function, updated interfaces to uint[3] signals, fixed LOP integration, updated to work with new BidCommitment fixed arrays.
 
 ### Priority 2: Off-Chain Scripting (The Demo Core)
 *   **✅ Task 2.4: COMPLETE - 1inch LOP Integration Validated** - Core ABI encoding logic proven, extension format confirmed, SDK-independent approach validated by community best practices.

@@ -12,7 +12,7 @@ const { describe, it, before } = require('mocha');
 const { expect } = require('chai');
 const { Circomkit } = require('circomkit');
 
-// Import the tested and working utilities
+// Import the tested and working utilities (without .ts extension)
 const { generateCircuitInputs } = require('../circuits/utils/input-generator');
 const { simulateAuction } = require('../circuits/utils/auction-simulator');
 

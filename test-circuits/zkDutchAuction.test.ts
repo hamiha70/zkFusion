@@ -71,7 +71,16 @@ describe('zkDutchAuction Circuit', function() {
       
       // Generate proper circuit inputs using tested utility
       const contractAddress = '0x123456789';
-      const input = await generateCircuitInputs(bids, [], constraints.makerMinimumPrice, constraints.makerMaximumAmount, contractAddress);
+      
+      // Generate real commitments for each bid (circuit expects these to match Poseidon hash)
+      const { generateRealCommitment } = require('../circuits/utils/input-generator');
+      const realCommitments = [];
+      for (const bid of bids) {
+        const commitment = await generateRealCommitment(bid, contractAddress);
+        realCommitments.push(commitment);
+      }
+      
+      const input = await generateCircuitInputs(bids, realCommitments, constraints.makerMinimumPrice, constraints.makerMaximumAmount, contractAddress);
       
       console.log('\n🔧 GENERATED INPUT DEBUG:');
       console.log('  Original bids were already sorted:', bids.map(b => b.price));

@@ -13,7 +13,7 @@ const path = require('path');
 const { simulateAuction, generateSortingArrays, generateWinnerBits } = require('./auction-simulator');
 // Import mock Poseidon for immediate unblocking
 const { generateMockCommitment, generateMockNullCommitment } = require('./mock-poseidon');
-const { formatFieldElement, addressToFieldElement } = require('./poseidon');
+const { formatFieldElement, addressToFieldElement, initPoseidon, poseidonHash } = require('./poseidon');
 // Import existing JavaScript utilities (TODO: Convert to TypeScript)
 // const { hashBid, isValidFieldElement } = require('./poseidon');
 /**
@@ -27,6 +27,23 @@ function convertToBid(jsBid, index) {
         originalIndex: index
     };
 }
+/**
+ * Generate real commitment using Poseidon hash (matches circuit expectation)
+ * @param bid Bid object with {price, amount, bidderAddress}
+ * @param contractAddress Contract address as string
+ * @returns {Promise<string>} Real Poseidon hash commitment
+ */
+async function generateRealCommitment(bid, contractAddress) {
+    const bidderAddress = bid.bidderAddress || bid.bidder; // Handle both field names
+    const inputs = [
+        formatFieldElement(bid.price),
+        formatFieldElement(bid.amount), 
+        addressToFieldElement(bidderAddress),
+        addressToFieldElement(contractAddress)
+    ];
+    return await poseidonHash(inputs);
+}
+
 /**
  * Generate circuit inputs from bid data using validated auction logic
  * @param bids Array of bid objects {price, amount, bidder}
@@ -66,7 +83,9 @@ async function generateCircuitInputs(bids, commitments, makerMinimumPrice, maker
     // Generate sorting arrays using validated logic
     const { sortedPrices, sortedAmounts, sortedIndices } = generateSortingArrays(paddedBids);
     // Generate winner bits for circuit (individual bits, not bitmask)
-    const winnerBits = generateWinnerBits(auctionResult.winnerBitmask);
+    const originalWinnerBits = generateWinnerBits(auctionResult.winnerBitmask);
+    // Generate sorted winner bits by applying the same permutation as the sorting
+    const sortedWinnerBits = sortedIndices.map(originalIndex => originalWinnerBits[originalIndex]);
     // Format all inputs for circuit (convert to field elements)
     const bidPrices = paddedBids.map(bid => formatFieldElement(bid.price));
     const bidAmounts = paddedBids.map(bid => formatFieldElement(bid.amount));
@@ -88,15 +107,16 @@ async function generateCircuitInputs(bids, commitments, makerMinimumPrice, maker
     const formattedSortedPrices = sortedPrices.map(p => formatFieldElement(p));
     const formattedSortedAmounts = sortedAmounts.map(a => formatFieldElement(a));
     const formattedSortedIndices = sortedIndices.map(i => formatFieldElement(i));
-    // Format winner bits
-    const formattedWinnerBits = winnerBits.map(bit => formatFieldElement(bit));
+    // Format winner bits (both original and sorted)
+    const formattedOriginalWinnerBits = originalWinnerBits.map(bit => formatFieldElement(bit));
+    const formattedSortedWinnerBits = sortedWinnerBits.map(bit => formatFieldElement(bit));
     // Validate all field elements
     const allInputs = [
         ...bidPrices, ...bidAmounts, ...bidderAddresses,
         ...formattedCommitments,
         formattedContractAddress, formattedMinPrice, formattedMaxAmount,
         ...formattedSortedPrices, ...formattedSortedAmounts, ...formattedSortedIndices,
-        ...formattedWinnerBits
+        ...formattedSortedWinnerBits, ...formattedOriginalWinnerBits
     ];
     for (let i = 0; i < allInputs.length; i++) {
         const input = allInputs[i];
@@ -110,22 +130,24 @@ async function generateCircuitInputs(bids, commitments, makerMinimumPrice, maker
                             i < 35 ? 'constraint' :
                                 i < 43 ? 'sortedPrice' :
                                     i < 51 ? 'sortedAmount' :
-                                        i < 59 ? 'sortedIndex' : 'winnerBit';
+                                        i < 59 ? 'sortedIndex' : 
+                                    i < 67 ? 'sortedWinnerBit' : 'originalWinnerBit';
             throw new Error(`Invalid field element for ${inputType}[${i}]: ${input}`);
         }
     }
-    console.log(`✅ Generated ${allInputs.length} circuit inputs using validated auction logic`);
+    console.log(`✅ Generated ${allInputs.length} circuit inputs using validated auction logic (expected: 75)`);
     console.log(`📊 Auction Results: ${auctionResult.numWinners} winners, ${auctionResult.totalFill} total fill, bitmask: ${auctionResult.winnerBitmask}`);
     return {
         // Private inputs - bid data (24 elements total)
         bidPrices,
         bidAmounts,
         bidderAddresses,
-        // Private inputs - sorting arrays (32 elements total)
+        // Private inputs - sorting arrays (40 elements total)
         sortedPrices: formattedSortedPrices,
         sortedAmounts: formattedSortedAmounts,
         sortedIndices: formattedSortedIndices,
-        winnerBits: formattedWinnerBits,
+        sortedWinnerBits: formattedSortedWinnerBits,
+        originalWinnerBits: formattedOriginalWinnerBits,
         // Public inputs - commitments and constraints (11 elements total)
         // These will be revealed in the ZK proof
         commitments: formattedCommitments,
@@ -196,6 +218,7 @@ function verifyCommitments(bids, commitments, contractAddress) {
 module.exports = {
     generateCircuitInputs,
     generateExpectedOutputs,
+    generateRealCommitment,
     saveInputsToFile,
     loadInputsFromFile,
     verifyCommitments

@@ -19,8 +19,8 @@
 
 ### Priority 1: Contract Refactoring (Backend Foundation)
 *   **Task 2.1: Refactor `BidCommitment.sol`** - Change mapping to fixed array, add `bidderAddresses` array, implement two-phase `initialize` with off-chain `nullHash`.
-*   **Task 2.2: Implement `ZkFusionGetter.sol`** - Create new contract, implement `getTakingAmount` to decode proof data from `extension.takingAmountData`, call `zkFusionExecutor.verifyAuctionProof`, return `totalTakingAmount`.
-*   **Task 2.3: Update `zkFusionExecutor.sol`** - Implement `verifyAuctionProof` view function to read commitments, construct public inputs, call `Verifier.verifyProof`, return `totalValue`.
+*   **✅ Task 2.2: COMPLETE - ZkFusionGetter.sol Implemented** - Created IAmountGetter interface for 1inch LOP, decodes ZK proof from extension.takingAmountData, verifies through zkFusionExecutor.verifyAuctionProof(), returns totalValue as taking amount.
+*   **Task 2.3: Update `zkFusionExecutor.sol`** - ✅ PARTIAL COMPLETE: Added verifyAuctionProof view function, updated interfaces to uint[3] signals, fixed LOP integration.
 
 ### Priority 2: Off-Chain Scripting (The Demo Core)
 *   **✅ Task 2.4: COMPLETE - 1inch LOP Integration Validated** - Core ABI encoding logic proven, extension format confirmed, SDK-independent approach validated by community best practices.

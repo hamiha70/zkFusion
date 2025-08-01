@@ -1,3 +1,4 @@
+// Version 2.0 - Final for Hackathon
 pragma circom 2.0.0;
 
 include "circomlib/circuits/comparators.circom";

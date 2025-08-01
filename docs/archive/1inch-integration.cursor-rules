@@ -1,0 +1,24 @@
+# 1inch Protocol Integration Rules - VALIDATION PHASE
+
+## CURRENT PRIORITY: Reality Check & Validation
+- FIRST: Compare our interfaces with docs_external/1inch/limit-order-protocol/contracts/interfaces/
+- VALIDATE: Order struct compatibility with LOP v4 (real address: 0x111111125421ca6dc452d289314280a0f8842a65)
+- TEST: SDK usage without API calls (hackathon constraint)
+- VERIFY: Extension pattern alignment for zkFusion auction integration
+
+## Integration Guidelines
+- Use @1inch/limit-order-protocol-utils for order creation
+- Always validate order signatures before submission
+- Handle partial fills in limit orders
+- Use proper nonce management for orders
+- Include maker/taker asset addresses validation
+- Test with mock LOP contracts first, then validate against real deployments
+- Reference docs_external/1inch/limit-order-protocol/contracts/ for interfaces
+- Use docs_external/1inch/fusion-sdk/ for advanced features
+- Check docs_external/tutorials/defi-integration/ for examples
+
+## Pre-Office Hour Validation Checklist
+- [ ] Interface compatibility confirmed
+- [ ] Extension pattern validated
+- [ ] SDK integration approach confirmed
+- [ ] Testnet deployment addresses identified

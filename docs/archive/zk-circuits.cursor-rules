@@ -1,0 +1,177 @@
+# ZK Circuits & Circom Development Rules
+
+## PROJECT CONTEXT
+You are working on zkFusion, a Dutch auction system using zero-knowledge proofs. The main circuit is zkDutchAuction.circom which implements off-chain sorting verification in ZK.
+
+## LANGUAGE STRATEGY - "SURGICAL TYPESCRIPT"
+- **JavaScript**: Keep for existing code (Hardhat tests, deployment scripts, utilities)
+- **TypeScript**: Use for NEW circuit testing, ZK proof pipeline, and type-critical components
+- **Rationale**: Maximize hackathon velocity while adding type safety where it matters most
+
+## CIRCUIT ARCHITECTURE
+The zkDutchAuction circuit uses:
+- **Off-chain sorting + ZK verification** (not in-circuit sorting)
+- **Permutation verification** using selector patterns
+- **Quadratic constraints only** - avoid dynamic array indexing
+- **1,804 non-linear constraints** for N=4 bidders
+
+## KEY TECHNICAL CONSTRAINTS
+
+### Circom Limitations
+- NO dynamic array indexing: `array[signal_index]` creates non-quadratic constraints
+- NO triple multiplication: `a * b * c` is non-quadratic
+- NO signal declaration inside loops: declare all signals at template level
+- USE selector patterns for dynamic selection
+
+### Correct Patterns
+```circom
+// ✅ GOOD: Selector pattern for dynamic indexing
+component eq[N][N];
+for (var i = 0; i < N; i++) {
+    for (var j = 0; j < N; j++) {
+        eq[i][j] = IsEqual();
+        eq[i][j].in[0] <== sortedIndices[i];
+        eq[i][j].in[1] <== j;
+    }
+}
+
+// ✅ GOOD: Break down complex multiplications
+signal bidValue[N];
+bidValue[i] <== price[i] * amount[i];  // First multiplication
+result <== isWinner[i] * bidValue[i];  // Second multiplication
+```
+
+### Avoid These Patterns
+```circom
+// ❌ BAD: Dynamic indexing
+sortedPrices[i] === originalPrices[permutation[i]];
+
+// ❌ BAD: Triple multiplication  
+result <== isWinner[i] * price[i] * amount[i];
+
+// ❌ BAD: Signals in loops
+for (var i = 0; i < N; i++) {
+    signal temp[10];  // Will fail compilation
+}
+```
+
+## TESTING STRATEGY - CIRCOMKIT
+
+### Framework Choice
+- **Use Circomkit** (not circom_tester) for advanced testing capabilities
+- **TypeScript** for circuit tests to ensure type safety
+- **Location**: `test-circuits/` directory (separate from existing JS tests)
+
+### Test Categories
+1. **Basic Functionality**: Valid inputs, expected outputs
+2. **Sorting Verification**: Permutation correctness, invalid sorting detection
+3. **Edge Cases**: Zero values, boundary conditions, maker ask limits
+4. **Attack Vectors**: Malicious permutations, witness tampering
+5. **Performance**: Constraint counts, proving time benchmarks
+
+### Circomkit Test Pattern
+```typescript
+describe('zkDutchAuction Circuit', () => {
+  let circuit: WitnessTester<InputSignals, OutputSignals>;
+
+  beforeAll(async () => {
+    const circomkit = new Circomkit();
+    circuit = await circomkit.WitnessTester('zkDutchAuction', {
+      file: 'zkDutchAuction',
+      template: 'zkDutchAuction', 
+      params: [4]
+    });
+  });
+
+  it('should verify correct sorting', async () => {
+    const input = {
+      bidPrices: [600, 1000, 400, 800],       // Original order
+      sortedPrices: [1000, 800, 600, 400],    // Correctly sorted
+      sortedIndices: [1, 3, 0, 2],            // Permutation mapping
+      // ... other required inputs
+    };
+    
+    await circuit.expectPass(input, expectedOutput);
+  });
+
+  it('should reject invalid permutation', async () => {
+    const invalidInput = {
+      // ... same prices but wrong permutation
+      sortedIndices: [0, 1, 2, 3],  // Wrong mapping
+    };
+    
+    await circuit.expectFail(invalidInput);
+  });
+});
+```
+
+## CIRCUIT INPUT/OUTPUT TYPES
+
+### Input Signals
+```typescript
+interface CircuitInputs {
+  // Private inputs (hidden)
+  bidPrices: bigint[];     // Original bid prices
+  bidAmounts: bigint[];    // Original bid amounts  
+  nonces: bigint[];        // Commitment nonces
+  sortedPrices: bigint[];  // Sorted by price (descending)
+  sortedAmounts: bigint[]; // Corresponding amounts
+  sortedIndices: bigint[]; // Permutation: sortedIndices[i] = original_position
+  
+  // Public inputs (visible)
+  commitments: bigint[];           // Poseidon hashes from on-chain
+  makerAsk: bigint;               // Maximum fill amount
+  commitmentContractAddress: bigint; // Contract address binding
+}
+```
+
+### Output Signals
+```typescript
+interface CircuitOutputs {
+  totalFill: bigint;        // Total amount filled
+  weightedAvgPrice: bigint; // Actually totalValue (avoid division in ZK)
+  numWinners: bigint;       // Number of winning bidders
+}
+```
+
+## DEBUGGING GUIDANCE
+
+### Common Compilation Errors
+- **"Non-quadratic constraint"**: Use selector pattern instead of dynamic indexing
+- **"Signal declaration in loop"**: Move signal declarations to template level
+- **"Include not found"**: Check circomlib include paths in compilation script
+- **"Stack too deep"**: Break complex expressions into intermediate signals
+
+### Circuit Validation Steps
+1. **Compile**: `npm run circuit:compile` - should show constraint counts
+2. **Test Basic**: Simple valid inputs should pass
+3. **Test Invalid**: Wrong inputs should fail constraints  
+4. **Performance**: Check constraint count is reasonable (<5000 for hackathon)
+
+## INTEGRATION POINTS
+
+### With Existing JavaScript
+```typescript
+// Import existing JS utilities in TS tests
+import { generatePoseidonHash } from '../../circuits/utils/poseidon.js';
+import { deployContracts } from '../../scripts/deploy-and-example.js';
+```
+
+### With Contract System
+- Circuit outputs map to `AuctionExecuted` event parameters
+- `totalFill` and `weightedAvgPrice` used by zkFusionExecutor
+- `sortedIndices` permutation determines winner addresses
+
+## CURRENT STATUS
+- ✅ Circuit compiles successfully (1,804 constraints)
+- ✅ Sorting verification logic implemented
+- ✅ All quadratic constraint issues resolved
+- ⏳ NEXT: Implement Circomkit testing suite
+
+## VALIDATION PRIORITIES
+1. **Sorting correctness**: Verify permutation logic works
+2. **Attack resistance**: Test malicious inputs fail appropriately  
+3. **Integration**: Ensure outputs match contract expectations
+4. **Performance**: Proving time acceptable for hackathon demo
+
+When working on circuit code, always consider constraint efficiency and hackathon timeline. Prioritize working functionality over optimization.

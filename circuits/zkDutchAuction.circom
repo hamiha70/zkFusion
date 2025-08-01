@@ -83,7 +83,7 @@ template zkDutchAuction(N) {
     
     // Outputs
     signal output totalFill;           // Total amount of tokens sold
-    signal output weightedAvgPrice;    // Actually total value (contract calculates weighted avg)
+    signal output totalValue;    // Formerly weightedAvgPrice. Sum of (price * amount) for winners.
     signal output numWinners;          // Number of winning bids
     
     // 1. Verify commitments using 4-input Poseidon hash
@@ -155,7 +155,7 @@ template zkDutchAuction(N) {
     
     // Output total value instead of weighted average (avoid division in circuit)
     // Contract will calculate weightedAvgPrice = totalValue / totalFill
-    weightedAvgPrice <== cumulativeValue[N];
+    totalValue <== cumulativeValue[N];
     
     // 5. Count winners and validate winner bits
     signal winnerCount[N+1];

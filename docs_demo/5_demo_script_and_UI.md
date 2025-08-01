@@ -1,4 +1,4 @@
-# Blueprint: The zkFusion "One-Page Miracle" Demo
+# Blueprint: The zkFusion "One-Page Miracle" Demo (v1.2 FINAL)
 
 **Date:** July 31, 2025
 **Objective:** To provide a comprehensive, step-by-step blueprint for creating a minimal, high-impact demo of the `zkFusion` protocol, including the UI, off-chain script, and on-chain interactions.
@@ -43,14 +43,15 @@ This will be a single, simple webpage. It can be built with React, Vue, or even 
 |    Status: [Pending...] -> [Auction Solved] -> [Proof Ready]   |
 |    [▶️ Step 3: Run Auction & Generate Proof] <--- Button 3      |
 |    --- Revealed Bids (Private to Runner) ---                   |
-|    - Bid 1: 5 WETH @ 3050 USDC (Price too low for fill)        |
+|    - Bid 1: 5 WETH @ 3050 USDC (Loses, price < maker minimum)  |
 |    - Bid 2: 3 WETH @ 3100 USDC  (WINNER)                        |
 |    - Bid 3: 8 WETH @ 3020 USDC  (WINNER)                        |
 |    - Bid 4: 2 WETH @ 2900 USDC  (Loses, price < maker minimum)  |
-|    --- ZK Proof ---                                            |
+|    --- ZK Proof Outputs ---                                    |
 |    Proof Generated: [Yes]                                      |
 |    Public Output (Total Fill): [11 WETH]                       |
-|    Public Output (Avg Price): [3054.54 USDC]                   |
+|    Public Output (Total Value): [33,600 USDC]                  |
+|    Public Input (Winners Verified): [Bits 0,1,0,0 -> Winners: B2, B3] |
 ------------------------------------------------------------------
 | 4. On-Chain Settlement via 1inch LOP                           |
 |    Status: [Ready to Settle] -> [SUCCESS]                      |
@@ -98,9 +99,9 @@ This code runs once to prepare the local forked environment.
 
 *   **Action:** User clicks "▶️ Step 2".
 *   **Script Logic (`step2_submitBids` function):**
-    1.  **Simulate Resolvers:** The script defines 4 sample bids (prices, amounts).
-    2.  **Generate Hashes:** For each bid, it calculates the `Poseidon` hash off-chain using `circomlibjs`.
-    3.  **Commit On-Chain:** The script sends 4 separate on-chain transactions from `runnerWallet` to the `commitmentContract`, calling `submitBid(hash)` for each one.
+    1.  **Simulate Resolvers:** The script defines 4 sample bids (prices, amounts, bidderAddresses).
+    2.  **Generate Hashes:** For each bid, it calculates the **4-input `Poseidon` hash** off-chain using `circomlibjs` (no nonce).
+    3.  **Commit On-Chain:** The script sends 4 separate on-chain transactions from `runnerWallet` to the `commitmentContract`, calling `submitBid(slot, hash)` for each one.
     4.  **UI Update:** The UI updates in real-time as each transaction confirms, showing the "Bids Committed" count and populating the on-chain hash list.
 
 ### **Demo Step 3: Run Auction & Generate Proof**
@@ -109,18 +110,17 @@ This code runs once to prepare the local forked environment.
 *   **Script Logic (`step3_generateProof` function):**
     1.  **Fetch Commitments:** The script calls the `view` function on the `commitmentContract` to get the array of all 8 committed hashes (including nulls for empty slots). This is a crucial step to show you are binding to on-chain state.
     2.  **Run Off-Chain Logic:**
-        *   The script runs the Dutch auction algorithm on the 4 revealed bids.
-        *   It determines the winners (`Bid 2` and `Bid 3` in the mockup).
-    3.  **Prepare Circuit Inputs:** It assembles all private and public inputs for the ZK circuit, including the `commitments` array fetched from the contract.
-    4.  **Generate ZK Proof:** It calls `snarkjs.groth16.fullProve(...)` to generate the proof and the public signals (`totalFill`, `weightedAvgPrice`, etc.).
-    5.  **UI Update:** The UI instantly updates section 3 with the results, showing the private bid data, the winners, and the public outputs from the proof.
+        *   The script runs the Dutch auction algorithm on the 4 revealed bids to determine the `originalWinnerBits` array (e.g., `[0, 1, 1, 0]`).
+    3.  **Prepare Circuit Inputs:** It assembles all private inputs and public inputs, including the now-known `originalWinnerBits`, for the ZK circuit.
+    4.  **Generate ZK Proof:** It calls `snarkjs.groth16.fullProve(...)`. This will only succeed if the provided `originalWinnerBits` matches the auction logic inside the circuit.
+    5.  **UI Update:** The UI instantly updates section 3 with the results.
 
 ### **Demo Step 4: Execute 1inch `fillOrder`**
 
 *   **Action:** The final, most important click: "▶️ Step 4".
 *   **Script Logic (`step4_settleOrder` function):**
     1.  **Craft the Extension:**
-        *   This is the most technical part. The script ABI-encodes the ZK proof, public outputs, and the `commitmentContractAddress` into the `extensionData` bytestring.
+        *   The script ABI-encodes the ZK proof, the public inputs (including `originalWinnerBits`), and the `commitmentContractAddress` into the `extensionData` bytestring.
         *   It then builds the full `getTakingAmount` calldata by prepending the function selector and the `ZkFusionGetter`'s address.
     2.  **Build the 1inch LOP Order:**
         *   **Interaction Point:** Use the **`@1inch/limit-order-protocol-utils` SDK** here.

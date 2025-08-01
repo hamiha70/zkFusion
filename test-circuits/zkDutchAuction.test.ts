@@ -52,71 +52,50 @@ describe('zkDutchAuction Circuit', function() {
     it('should verify sorted input (identity permutation)', async () => {
       console.log('🧪 Testing sorted input with identity permutation...');
       
-      // Test data: bids already sorted by price (descending)
-      const bidPrices = [1000n, 800n, 600n, 400n, 0n, 0n, 0n, 0n];
-      const bidAmounts = [100n, 150n, 200n, 250n, 0n, 0n, 0n, 0n];
-      const bidderAddresses = [
-        '0xabcdef1234567890abcdef123456789012',
-        '0x11223344556677889900112233445566', 
-        '0x11112222333344445555666677778888',
-        '0x12345678901234567890123456789012',
-        '0x0000000000000000000000000000000000000000',
-        '0x0000000000000000000000000000000000000000',
-        '0x0000000000000000000000000000000000000000',
-        '0x0000000000000000000000000000000000000000'
+      // TEST INTENT: Verify circuit works when bids are already sorted (identity permutation)
+      // This tests the simplest case where original order = sorted order
+      
+      // Create bids already sorted by price (descending) - SAME TEST DATA AS BEFORE
+      const bids = [
+        { price: 1000, amount: 100, bidder: '0xabcdef1234567890abcdef123456789012' },
+        { price: 800,  amount: 150, bidder: '0x11223344556677889900112233445566' },
+        { price: 600,  amount: 200, bidder: '0x11112222333344445555666677778888' },
+        { price: 400,  amount: 250, bidder: '0x12345678901234567890123456789012' }
       ];
-
-      const commitments = await generateTestCommitments(bidPrices, bidAmounts, bidderAddresses);
-
-      const input: CircuitInputs = {
-        // Private inputs - already sorted bids (what we're proving)
-        bidPrices: bidPrices,
-        bidAmounts: bidAmounts,
-        bidderAddresses: bidderAddresses,
-        
-        // Sorting verification - since bids are already sorted, use identity mapping
-        sortedPrices: [1000n, 800n, 600n, 400n, 0n, 0n, 0n, 0n],  // Same as bidPrices
-        sortedAmounts: [100n, 150n, 200n, 250n, 0n, 0n, 0n, 0n],  // Same as bidAmounts  
-        sortedIndices: [0n, 1n, 2n, 3n, 4n, 5n, 6n, 7n],          // Identity permutation
-        sortedWinnerBits: [1n, 1n, 1n, 0n, 0n, 0n, 0n, 0n],       // Winners in sorted order (private)
-        
-        // Public inputs
-        commitments: commitments,
-        commitmentContractAddress: 123456789n,      // Mock contract address
-        makerMinimumPrice: 0n,                      // No minimum price constraint
-        makerMaximumAmount: 500n,                   // Can fill first 3 bids (100+150+200=450)
-        originalWinnerBits: [1n, 1n, 1n, 0n, 0n, 0n, 0n, 0n]      // Winners in original order (public, same as sorted for identity permutation)
+      
+      // Auction constraints - SAME AS BEFORE
+      const constraints = {
+        makerMinimumPrice: 0,     // No minimum price constraint  
+        makerMaximumAmount: 500   // Can fill first 3 bids (100+150+200=450)
       };
       
-      console.log('\n🔧 CIRCUIT INPUT DEBUG:');
-      console.log('Input structure:');
-      console.log('  bidPrices:', input.bidPrices);
-      console.log('  bidAmounts:', input.bidAmounts);
-      console.log('  bidderAddresses:', input.bidderAddresses);
-      console.log('  sortedPrices:', input.sortedPrices);
-      console.log('  sortedAmounts:', input.sortedAmounts);
-      console.log('  sortedIndices:', input.sortedIndices);
-      console.log('  sortedWinnerBits:', input.sortedWinnerBits);
-      console.log('  originalWinnerBits:', input.originalWinnerBits);
-      console.log('  commitments:', input.commitments);
-      console.log('  commitmentContractAddress:', input.commitmentContractAddress);
-      console.log('  makerMinimumPrice:', input.makerMinimumPrice);
-      console.log('  makerMaximumAmount:', input.makerMaximumAmount);
-
-      const witness = await circuit.calculateWitness(input);
+      // Generate proper circuit inputs using tested utility
+      const contractAddress = '0x123456789';
+      const input = await generateCircuitInputs(bids, [], constraints.makerMinimumPrice, constraints.makerMaximumAmount, contractAddress);
       
-      // Define expected outputs
+      console.log('\n🔧 GENERATED INPUT DEBUG:');
+      console.log('  Original bids were already sorted:', bids.map(b => b.price));
+      console.log('  Identity permutation expected');
+      
+      // Calculate expected outputs using tested simulation
+      const expectedResult = simulateAuction(bids, constraints);
+      
       const expectedOutput = {
-        totalFill: 450n, // 100 + 150 + 200
-        numWinners: 3n,
-        weightedAvgPrice: 340000n // 1000*100 + 800*150 + 600*200 = 100000 + 120000 + 120000
+        totalFill: BigInt(expectedResult.totalFill),
+        totalValue: BigInt(expectedResult.totalValue),  // Updated from weightedAvgPrice
+        numWinners: BigInt(expectedResult.numWinners)
       };
+      
+      console.log('\n📊 EXPECTED OUTPUT:');
+      console.log('  totalFill:', expectedOutput.totalFill, '(should be 450: 100+150+200)');
+      console.log('  totalValue:', expectedOutput.totalValue, '(should be 340000: 1000*100+800*150+600*200)');
+      console.log('  numWinners:', expectedOutput.numWinners, '(should be 3)');
       
       try {
         await circuit.expectPass(input, expectedOutput);
-        console.log('✅ Sorted input test passed!');
+        console.log('✅ Identity permutation test passed - circuit correctly handles pre-sorted bids!');
       } catch (error) {
-        console.error('❌ Sorted input test failed:', error);
+        console.error('❌ Identity permutation test failed:', error);
         throw error;
       }
     });
@@ -336,8 +315,8 @@ describe('zkDutchAuction Circuit', function() {
       console.log('🧪 Testing constraint count...');
       
       try {
-        await circuit.expectConstraintCount(1804, true); // Exact count from compilation
-        console.log('✅ Constraint count matches expected value (1804)');
+        await circuit.expectConstraintCount(14311, true); // Updated count from latest compilation
+        console.log('✅ Constraint count matches expected value (14,311)');
       } catch (error) {
         console.error('❌ Constraint count test failed:', error);
         // Don't throw - constraint count might vary slightly

@@ -230,15 +230,24 @@ class zkFusionDemo {
             bidder: bidder.address
         }));
         
-        // Use the actual commitments from our contract
-        const commitmentsForCircuit = this.bidders.map(bidder => bidder.commitment);
+        // Create complete array of 8 commitments (4 real + 4 null) for circuit
+        const commitmentsForCircuit = [...this.bidders.map(bidder => bidder.commitment)];
+        const contractAddress = await this.contracts.bidCommitment.getAddress();
+        
+        // Pad with null commitments to reach 8 total
+        while (commitmentsForCircuit.length < 8) {
+            const nullCommitment = await generateCommitment4(0, 0, 0n, BigInt(contractAddress));
+            commitmentsForCircuit.push(nullCommitment);
+        }
+        
+        console.log(`✅ Prepared ${commitmentsForCircuit.length} commitments for circuit (4 real + 4 null)`);
         
         const circuitInputs = await generateCircuitInputs(
             bidsForCircuit,
-            commitmentsForCircuit,
+            commitmentsForCircuit, // Now passing our real commitments!
             0, // makerMinimumPrice: 0 (will accept any price)
             450, // makerMaximumAmount: 450 WETH
-            await this.contracts.bidCommitment.getAddress()
+            contractAddress
         );
         
         console.log(`✅ Generated ${Object.keys(circuitInputs).length} circuit inputs`);

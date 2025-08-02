@@ -79,10 +79,16 @@ describe("🚨 CRITICAL: True 1inch LOP Integration Test", function () {
     
     // Connect to real 1inch LOP contract
     const oneInchLOPABI = [
-      "function fillOrder((uint256,address,address,address,address,address,uint256,uint256,uint256,uint256,uint256,uint256,bytes,bytes,bytes,bytes,bytes,bytes) order, bytes signature, bytes interaction, uint256 makingAmount, uint256 takingAmount, uint256 skipPermitAndThresholdAmount) external payable returns (uint256, uint256, bytes32)",
-      "function cancelOrder((uint256,address,address,address,address,address,uint256,uint256,uint256,uint256,uint256,uint256,bytes,bytes,bytes,bytes,bytes,bytes) order) external returns (uint256)",
-      "function remaining(bytes32 orderHash) external view returns (uint256)",
-      "function remainingRaw(bytes32 orderHash) external view returns (uint256)",
+      // fillOrder function (basic version)
+      "function fillOrder((uint256 salt, address maker, address receiver, address makerAsset, address takerAsset, uint256 makingAmount, uint256 takingAmount, uint256 makerTraits) order, bytes32 r, bytes32 vs, uint256 amount, uint256 takerTraits) external payable returns (uint256 makingAmount, uint256 takingAmount, bytes32 orderHash)",
+      
+      // fillOrderArgs function (with args parameter for extensions)
+      "function fillOrderArgs((uint256 salt, address maker, address receiver, address makerAsset, address takerAsset, uint256 makingAmount, uint256 takingAmount, uint256 makerTraits) order, bytes32 r, bytes32 vs, uint256 amount, uint256 takerTraits, bytes args) external payable returns (uint256 makingAmount, uint256 takingAmount, bytes32 orderHash)",
+      
+      // Other useful functions
+      "function cancelOrder(uint256 makerTraits, bytes32 orderHash) external",
+      "function remainingInvalidatorForOrder(address maker, bytes32 orderHash) external view returns (uint256 remaining)",
+      "function hashOrder((uint256 salt, address maker, address receiver, address makerAsset, address takerAsset, uint256 makingAmount, uint256 takingAmount, uint256 makerTraits) order) external view returns (bytes32 orderHash)",
       "function simulate(address target, bytes calldata data) external",
     ];
     
@@ -578,8 +584,8 @@ describe("🚨 CRITICAL: True 1inch LOP Integration Test", function () {
     
     console.log("  ✅ Order signed successfully");
 
-    // === STEP 5: Execute fillOrder on the real 1inch LOP contract ===
-    console.log("  🔄 Executing fillOrder on 1inch LOP...");
+    // === STEP 5: Execute fillOrderArgs on the real 1inch LOP contract ===
+    console.log("  🔄 Executing fillOrderArgs on 1inch LOP...");
     
     // Record initial balances
     const initialMakerWeth = await wethContract.balanceOf(bidder1.address);
@@ -597,17 +603,62 @@ describe("🚨 CRITICAL: True 1inch LOP Integration Test", function () {
     const requiredUsdc = ethers.parseUnits("200000", 6); // More than enough
     await usdcContract.connect(owner).approve(lopAddress, requiredUsdc);
     
-    // Fill the order (owner acts as the taker/resolver)
-    const fillTx = await oneInchLOP.connect(owner).fillOrder(
-      order,
+    // Build takerTraits with extension length
+    const TakerTraitsConstants = {
+      _ARGS_EXTENSION_LENGTH_OFFSET: 224n,
+    };
+    
+    const takerTraits = BigInt(takingAmountData.length / 2) << TakerTraitsConstants._ARGS_EXTENSION_LENGTH_OFFSET;
+    
+    // For fillOrderArgs, we need to remove the extension from the order and pass it as args
+    const cleanOrder = {
+      salt: order.salt,
+      maker: order.maker,
+      receiver: order.receiver,
+      makerAsset: order.makerAsset,
+      takerAsset: order.takerAsset,
+      makingAmount: order.makingAmount,
+      takingAmount: order.takingAmount,
+      makerTraits: BigInt(order.makerTraits) & (~(1n << 249n)) // Remove HAS_EXTENSION_FLAG
+    };
+    
+    console.log(`  🔍 Using takerTraits: ${takerTraits.toString()}`);
+    console.log(`  🔍 Args (takingAmountData) length: ${takingAmountData.length} bytes`);
+    
+    // Debug: Check approvals
+    const makerWethAllowance = await wethContract.balanceOf(bidder1.address);
+    const takerUsdcAllowance = await usdcContract.allowance(owner.address, lopAddress);
+    console.log(`  🔍 Maker WETH balance: ${ethers.formatEther(makerWethAllowance)} WETH`);
+    console.log(`  🔍 Taker USDC allowance: ${ethers.formatUnits(takerUsdcAllowance, 6)} USDC`);
+    
+    // Debug: Approve WETH for the maker (bidder1) to spend
+    console.log(`  📝 Approving WETH for maker (bidder1)...`);
+    await wethContract.connect(bidder1).approve(lopAddress, ethers.parseEther("100"));
+    const makerWethAllowanceAfter = await wethContract.allowance(bidder1.address, lopAddress);
+    console.log(`  ✅ Maker WETH allowance: ${ethers.formatEther(makerWethAllowanceAfter)} WETH`);
+    
+    // Debug: Log order details
+    console.log(`  🔍 Clean order details:`);
+    console.log(`    salt: ${cleanOrder.salt}`);
+    console.log(`    maker: ${cleanOrder.maker}`);
+    console.log(`    makerAsset: ${cleanOrder.makerAsset}`);
+    console.log(`    takerAsset: ${cleanOrder.takerAsset}`);
+    console.log(`    makingAmount: ${ethers.formatEther(cleanOrder.makingAmount)} WETH`);
+    console.log(`    takingAmount: ${ethers.formatUnits(cleanOrder.takingAmount, 6)} USDC`);
+    console.log(`    makerTraits: ${cleanOrder.makerTraits}`);
+    
+    // Fill the order using fillOrderArgs (owner acts as the taker/resolver)
+    const fillTx = await oneInchLOP.connect(owner).fillOrderArgs(
+      cleanOrder,
       r,
       vs,
       ethers.parseEther("100"), // Fill the full 100 WETH
-      0 // takerTraits = 0 (no special flags)
+      takerTraits, // takerTraits with extension length
+      takingAmountData // args containing our ZK proof data
     );
     
     const fillReceipt = await fillTx.wait();
-    console.log("  ✅ fillOrder transaction successful!");
+    console.log("  ✅ fillOrderArgs transaction successful!");
     console.log(`    Gas used: ${fillReceipt.gasUsed.toString()}`);
 
     // === STEP 6: Verify the token transfers ===

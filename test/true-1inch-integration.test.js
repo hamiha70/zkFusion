@@ -307,23 +307,16 @@ describe("🚨 CRITICAL: True 1inch LOP Integration Test", function () {
     const makingAmount = ethers.parseEther("100"); // 100 WETH
     
     // Create a minimal 1inch Order struct for testing
-    // Note: Most fields can be dummy values since our contract only uses the extension
+    // Note: Using the exact 1inch LOP v4 Order structure
     const dummyOrder = {
       salt: 1,
-      maker: owner.address,
-      receiver: ethers.ZeroAddress,
-      makerAsset: WETH_ADDRESS,
-      takerAsset: USDC_ADDRESS,
-      makingAmount: makingAmount,
-      takingAmount: 0, // Will be calculated
-      makerAssetData: "0x",
-      takerAssetData: "0x",
-      getMakingAmount: "0x",
-      getTakingAmount: "0x",
-      predicate: "0x",
-      permit: "0x",
-      preInteraction: "0x",
-      postInteraction: "0x"
+      maker: BigInt(owner.address),        // Address type (uint256)
+      receiver: 0n,                        // Address type (uint256) - zero for no receiver
+      makerAsset: BigInt(WETH_ADDRESS),    // Address type (uint256)
+      takerAsset: BigInt(USDC_ADDRESS),    // Address type (uint256)
+      makingAmount: makingAmount,          // uint256
+      takingAmount: 0,                     // uint256 - will be calculated
+      makerTraits: 0n                      // MakerTraits type (uint256)
     };
     
     // 🚨 This is the critical test - does it fit within staticcall gas limits?

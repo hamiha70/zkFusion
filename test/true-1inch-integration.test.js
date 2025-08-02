@@ -56,7 +56,7 @@ describe("🚨 CRITICAL: True 1inch LOP Integration Test", function () {
   
   // Environment configuration
   const FORK_BLOCK_NUMBER = parseInt(process.env.FORK_BLOCK_NUMBER) || 364175818;
-  const ONEINCH_LOP_ADDRESS = process.env.ONEINCH_LOP_ADDRESS || "0x1111111254fb6c44bac0bed2854e76f90643097d";
+  const ONEINCH_LOP_ADDRESS = process.env.ONEINCH_LOP_ADDRESS || "0x111111125421ca6dc452d289314280a0f8842a65";
   const WETH_ADDRESS = process.env.WETH_ADDRESS || "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1";
   const USDC_ADDRESS = process.env.USDC_ADDRESS || "0xaf88d065e77c8cC2239327C5EDb3A432268e5831";
   
@@ -79,16 +79,18 @@ describe("🚨 CRITICAL: True 1inch LOP Integration Test", function () {
     
     // Connect to real 1inch LOP contract
     const oneInchLOPABI = [
-      // fillOrder function (basic version)
-      "function fillOrder((uint256 salt, address maker, address receiver, address makerAsset, address takerAsset, uint256 makingAmount, uint256 takingAmount, uint256 makerTraits) order, bytes32 r, bytes32 vs, uint256 amount, uint256 takerTraits) external payable returns (uint256 makingAmount, uint256 takingAmount, bytes32 orderHash)",
+      // fillOrder function (basic version) - uses Address and MakerTraits types
+      "function fillOrder((uint256 salt, uint256 maker, uint256 receiver, uint256 makerAsset, uint256 takerAsset, uint256 makingAmount, uint256 takingAmount, uint256 makerTraits) order, bytes32 r, bytes32 vs, uint256 amount, uint256 takerTraits) external payable returns (uint256 makingAmount, uint256 takingAmount, bytes32 orderHash)",
       
-      // fillOrderArgs function (with args parameter for extensions)
-      "function fillOrderArgs((uint256 salt, address maker, address receiver, address makerAsset, address takerAsset, uint256 makingAmount, uint256 takingAmount, uint256 makerTraits) order, bytes32 r, bytes32 vs, uint256 amount, uint256 takerTraits, bytes args) external payable returns (uint256 makingAmount, uint256 takingAmount, bytes32 orderHash)",
+      // fillOrderArgs function (with args parameter for extensions) - uses Address and MakerTraits types  
+      "function fillOrderArgs((uint256 salt, uint256 maker, uint256 receiver, uint256 makerAsset, uint256 takerAsset, uint256 makingAmount, uint256 takingAmount, uint256 makerTraits) order, bytes32 r, bytes32 vs, uint256 amount, uint256 takerTraits, bytes args) external payable returns (uint256 makingAmount, uint256 takingAmount, bytes32 orderHash)",
+      
+      // hashOrder function - uses Address and MakerTraits types
+      "function hashOrder((uint256 salt, uint256 maker, uint256 receiver, uint256 makerAsset, uint256 takerAsset, uint256 makingAmount, uint256 takingAmount, uint256 makerTraits) order) external view returns (bytes32 orderHash)",
       
       // Other useful functions
       "function cancelOrder(uint256 makerTraits, bytes32 orderHash) external",
       "function remainingInvalidatorForOrder(address maker, bytes32 orderHash) external view returns (uint256 remaining)",
-      "function hashOrder((uint256 salt, address maker, address receiver, address makerAsset, address takerAsset, uint256 makingAmount, uint256 takingAmount, uint256 makerTraits) order) external view returns (bytes32 orderHash)",
       "function simulate(address target, bytes calldata data) external",
     ];
     
@@ -99,8 +101,11 @@ describe("🚨 CRITICAL: True 1inch LOP Integration Test", function () {
       "function balanceOf(address account) external view returns (uint256)",
       "function transfer(address to, uint256 amount) external returns (bool)",
       "function approve(address spender, uint256 amount) external returns (bool)",
+      "function allowance(address owner, address spender) external view returns (uint256)",
       "function decimals() external view returns (uint8)",
       "function symbol() external view returns (string)",
+      "function name() external view returns (string)",
+      "function totalSupply() external view returns (uint256)",
     ];
     
     wethContract = await ethers.getContractAt(erc20ABI, WETH_ADDRESS);
@@ -648,18 +653,79 @@ describe("🚨 CRITICAL: True 1inch LOP Integration Test", function () {
     console.log(`    makerTraits: ${cleanOrder.makerTraits}`);
     
     // Fill the order using fillOrderArgs (owner acts as the taker/resolver)
-    const fillTx = await oneInchLOP.connect(owner).fillOrderArgs(
-      cleanOrder,
-      r,
-      vs,
-      ethers.parseEther("100"), // Fill the full 100 WETH
-      takerTraits, // takerTraits with extension length
-      takingAmountData // args containing our ZK proof data
-    );
-    
-    const fillReceipt = await fillTx.wait();
-    console.log("  ✅ fillOrderArgs transaction successful!");
-    console.log(`    Gas used: ${fillReceipt.gasUsed.toString()}`);
+    try {
+      console.log("  🔄 Attempting fillOrderArgs call...");
+      
+      // First, let's validate the order hash
+      const expectedOrderHash = await oneInchLOP.hashOrder(cleanOrder);
+      console.log(`  🔍 Expected order hash: ${expectedOrderHash}`);
+      
+      // Try to estimate gas first to get better error info
+      try {
+        const gasEstimate = await oneInchLOP.connect(owner).fillOrderArgs.estimateGas(
+          cleanOrder,
+          r,
+          vs,
+          ethers.parseEther("100"),
+          takerTraits,
+          takingAmountData
+        );
+        console.log(`  ⛽ Gas estimate: ${gasEstimate.toString()}`);
+      } catch (gasError) {
+        console.log(`  ❌ Gas estimation failed:`, gasError.message);
+        if (gasError.data) {
+          console.log(`  🔍 Error data:`, gasError.data);
+        }
+      }
+      
+      const fillTx = await oneInchLOP.connect(owner).fillOrderArgs(
+        cleanOrder,
+        r,
+        vs,
+        ethers.parseEther("100"), // Fill the full 100 WETH
+        takerTraits, // takerTraits with extension length
+        takingAmountData // args containing our ZK proof data
+      );
+      
+      const fillReceipt = await fillTx.wait();
+      console.log("  ✅ fillOrderArgs transaction successful!");
+      console.log(`    Gas used: ${fillReceipt.gasUsed.toString()}`);
+      
+    } catch (error) {
+      console.log(`  ❌ fillOrderArgs failed:`, error.message);
+      
+      // Try to get more detailed error information
+      if (error.data) {
+        console.log(`  🔍 Error data:`, error.data);
+      }
+      
+      if (error.transaction) {
+        console.log(`  🔍 Transaction:`, error.transaction);
+      }
+      
+      if (error.receipt) {
+        console.log(`  🔍 Receipt:`, error.receipt);
+      }
+      
+      // Try a static call to get the revert reason
+      try {
+        await oneInchLOP.connect(owner).fillOrderArgs.staticCall(
+          cleanOrder,
+          r,
+          vs,
+          ethers.parseEther("100"),
+          takerTraits,
+          takingAmountData
+        );
+      } catch (staticError) {
+        console.log(`  🔍 Static call error:`, staticError.message);
+        if (staticError.data) {
+          console.log(`  🔍 Static call error data:`, staticError.data);
+        }
+      }
+      
+      throw error; // Re-throw to fail the test
+    }
 
     // === STEP 6: Verify the token transfers ===
     const finalMakerWeth = await wethContract.balanceOf(bidder1.address);

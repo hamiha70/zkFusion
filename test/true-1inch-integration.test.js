@@ -239,8 +239,16 @@ describe("🚨 CRITICAL: True 1inch LOP Integration Test", function () {
     const commitmentCreatedEvent = receipt.logs.find(
       log => log.topics[0] === ethers.id("CommitmentCreated(address,address)")
     );
-    const commitmentAddress = ethers.getAddress("0x" + commitmentCreatedEvent.topics[2].slice(26));
+    const commitmentAddress = ethers.getAddress("0x" + commitmentCreatedEvent.topics[1].slice(26));
     commitmentContract = await ethers.getContractAt("BidCommitment", commitmentAddress);
+    
+    console.log(`  🔍 Created commitment contract at: ${commitmentAddress}`);
+    console.log(`  🔍 Event topics[1] (contract): ${commitmentCreatedEvent.topics[1]}`);
+    console.log(`  🔍 Event topics[2] (creator): ${commitmentCreatedEvent.topics[2]}`);
+    
+    // Verify the commitment contract is now registered
+    const isValidAfterCreation = await commitmentFactory.isValidCommitmentContract(commitmentAddress);
+    console.log(`  🔍 Commitment contract is valid after creation: ${isValidAfterCreation}`);
     
     // Generate commitments for initialization
     const nullHash = await generateCommitment4(0n, 0n, ethers.ZeroAddress, commitmentAddress);
@@ -303,6 +311,21 @@ describe("🚨 CRITICAL: True 1inch LOP Integration Test", function () {
       ]
     );
     
+    // Add the 20-byte getter address prefix as expected by the contract
+    // Format: [20-byte getter address][ABI-encoded proof data]
+    const getterAddress = await zkFusionGetter.getAddress();
+    const getterAddressBytes = ethers.getBytes(getterAddress); // 20 bytes
+    const fullExtensionData = ethers.concat([getterAddressBytes, extensionData]);
+    
+    console.log(`  🔍 Extension data length: ${fullExtensionData.length} bytes`);
+    console.log(`  🔍 Getter address: ${getterAddress}`);
+    console.log(`  🔍 Proof data length: ${extensionData.length} bytes`);
+    
+    // Debug: Check if commitment contract is registered with factory
+    const isValidCommitment = await commitmentFactory.isValidCommitmentContract(commitmentAddress);
+    console.log(`  🔍 Commitment contract ${commitmentAddress} is valid: ${isValidCommitment}`);
+    console.log(`  🔍 CommitmentFactory address: ${await commitmentFactory.getAddress()}`);
+    
     // Test the gas usage
     const makingAmount = ethers.parseEther("100"); // 100 WETH
     
@@ -322,7 +345,7 @@ describe("🚨 CRITICAL: True 1inch LOP Integration Test", function () {
     // 🚨 This is the critical test - does it fit within staticcall gas limits?
     const gasEstimate = await zkFusionGetter.getTakingAmount.estimateGas(
       dummyOrder,           // order
-      extensionData,        // extension  
+      fullExtensionData,        // extension  
       ethers.ZeroHash,      // orderHash
       bidder1.address,      // taker
       makingAmount,         // makingAmount
@@ -343,7 +366,15 @@ describe("🚨 CRITICAL: True 1inch LOP Integration Test", function () {
     }
     
     // Actually call the function to ensure it works
-    const takingAmount = await zkFusionGetter.getTakingAmount(makingAmount, extensionData);
+    const takingAmount = await zkFusionGetter.getTakingAmount(
+      dummyOrder,           // order
+      fullExtensionData,    // extension  
+      ethers.ZeroHash,      // orderHash
+      bidder1.address,      // taker
+      makingAmount,         // makingAmount
+      makingAmount,         // remainingMakingAmount  
+      "0x"                  // extraData
+    );
     console.log(`  💰 Calculated taking amount: ${ethers.formatUnits(takingAmount, 6)} USDC`);
     
     expect(takingAmount).to.be.gt(0);

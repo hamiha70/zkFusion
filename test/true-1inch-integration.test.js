@@ -3,8 +3,51 @@ const { ethers } = require("hardhat");
 require("dotenv").config();
 
 // Import utilities
-const { generateCircuitInputs, generateZkProof } = require("../circuits/utils/proof-utils.js");
-const { generateCommitment4 } = require("../circuits/utils/hash-utils.js");
+const { generateCircuitInputs } = require("../circuits/utils/input-generator.js");
+const fs = require("fs");
+const { execSync } = require("child_process");
+const { poseidon4 } = require("poseidon-lite");
+
+// Hash utility function (extracted from demo.js)
+async function generateCommitment4(price, amount, bidderAddress, contractAddress) {
+    const inputs = [
+        BigInt(price),
+        BigInt(amount),
+        BigInt(bidderAddress),
+        BigInt(contractAddress)
+    ];
+    const result = poseidon4(inputs);
+    return result.toString();
+}
+
+// ZK Proof generation function (extracted from demo.js)
+async function generateZkProof(circuitInputs) {
+  // Write circuit inputs to file for snarkjs
+  const inputFile = './dist/integration_test_input.json';
+  fs.writeFileSync(inputFile, JSON.stringify(circuitInputs, (key, value) =>
+    typeof value === 'bigint' ? value.toString() : value
+  ));
+  
+  // Generate witness
+  execSync('cd dist && node zkDutchAuction8_js/generate_witness.js zkDutchAuction8_js/zkDutchAuction8.wasm integration_test_input.json integration_test_witness.wtns', { stdio: 'inherit' });
+  
+  // Generate ZK proof
+  execSync('npx snarkjs groth16 prove ./dist/zkDutchAuction8_0000.zkey ./dist/integration_test_witness.wtns ./dist/integration_test_proof.json ./dist/integration_test_public.json', { stdio: 'inherit' });
+  
+  // Read generated proof and public signals
+  const proof = JSON.parse(fs.readFileSync('./dist/integration_test_proof.json', 'utf8'));
+  const publicSignals = JSON.parse(fs.readFileSync('./dist/integration_test_public.json', 'utf8'));
+  
+  // Convert proof to the format expected by our contract
+  const proofArray = [
+    proof.pi_a[0], proof.pi_a[1],
+    proof.pi_b[0][1], proof.pi_b[0][0],
+    proof.pi_b[1][1], proof.pi_b[1][0],
+    proof.pi_c[0], proof.pi_c[1]
+  ];
+  
+  return { proof: proofArray, publicSignals };
+}
 
 describe("🚨 CRITICAL: True 1inch LOP Integration Test", function () {
   let owner, bidder1, bidder2, bidder3;
@@ -34,9 +77,6 @@ describe("🚨 CRITICAL: True 1inch LOP Integration Test", function () {
     // Get signers
     [owner, bidder1, bidder2, bidder3] = await ethers.getSigners();
     
-    // 🚨 CRITICAL: Fund accounts from whales
-    await fundAccountsFromWhales();
-    
     // Connect to real 1inch LOP contract
     const oneInchLOPABI = [
       "function fillOrder((uint256,address,address,address,address,address,uint256,uint256,uint256,uint256,uint256,uint256,bytes,bytes,bytes,bytes,bytes,bytes) order, bytes signature, bytes interaction, uint256 makingAmount, uint256 takingAmount, uint256 skipPermitAndThresholdAmount) external payable returns (uint256, uint256, bytes32)",
@@ -59,6 +99,9 @@ describe("🚨 CRITICAL: True 1inch LOP Integration Test", function () {
     
     wethContract = await ethers.getContractAt(erc20ABI, WETH_ADDRESS);
     usdcContract = await ethers.getContractAt(erc20ABI, USDC_ADDRESS);
+    
+    // 🚨 CRITICAL: Fund accounts from whales (after contracts are initialized)
+    await fundAccountsFromWhales();
     
     // Deploy our ZK contracts
     await deployZkFusionContracts();
@@ -86,6 +129,24 @@ describe("🚨 CRITICAL: True 1inch LOP Integration Test", function () {
       console.log(`  📤 Sent ${ethers.formatEther(ethAmount)} ETH to ${account.address}`);
     }
     
+    // Fund whale addresses with more ETH for gas fees
+    const gasEth = ethers.parseEther("5.0"); // 5 ETH for gas (increased)
+    await ethWhale.sendTransaction({
+      to: WHALE_WETH_ADDRESS,
+      value: gasEth,
+    });
+    await ethWhale.sendTransaction({
+      to: WHALE_USDC_ADDRESS,
+      value: gasEth,
+    });
+    console.log(`  ⛽ Funded whale addresses with ${ethers.formatEther(gasEth)} ETH for gas`);
+    
+    // Verify gas funding worked
+    const wethWhaleBalance = await ethers.provider.getBalance(WHALE_WETH_ADDRESS);
+    const usdcWhaleBalance = await ethers.provider.getBalance(WHALE_USDC_ADDRESS);
+    console.log(`  ✅ WETH whale balance: ${ethers.formatEther(wethWhaleBalance)} ETH`);
+    console.log(`  ✅ USDC whale balance: ${ethers.formatEther(usdcWhaleBalance)} ETH`);
+    
     await network.provider.request({
       method: "hardhat_stopImpersonatingAccount",
       params: [WHALE_ETH_ADDRESS],
@@ -98,7 +159,7 @@ describe("🚨 CRITICAL: True 1inch LOP Integration Test", function () {
     });
     
     const wethWhale = await ethers.getSigner(WHALE_WETH_ADDRESS);
-    const wethAmount = ethers.parseEther("100.0"); // 100 WETH
+    const wethAmount = ethers.parseEther("50.0"); // 50 WETH (reduced from 100 to fit whale's balance)
     
     for (const account of [owner, bidder1, bidder2, bidder3]) {
       await wethContract.connect(wethWhale).transfer(account.address, wethAmount);
@@ -145,16 +206,25 @@ describe("🚨 CRITICAL: True 1inch LOP Integration Test", function () {
     commitmentFactory = await CommitmentFactoryContract.deploy();
     await commitmentFactory.waitForDeployment();
     
+    // Deploy zkFusionExecutor
+    const zkFusionExecutorFactory = await ethers.getContractFactory("zkFusionExecutor");
+    const zkFusionExecutor = await zkFusionExecutorFactory.deploy(
+      ONEINCH_LOP_ADDRESS, // _lop
+      await verifier.getAddress(), // _verifier
+      await commitmentFactory.getAddress() // _factory
+    );
+    await zkFusionExecutor.waitForDeployment();
+    
     // Deploy ZkFusionGetter
     const ZkFusionGetterFactory = await ethers.getContractFactory("ZkFusionGetter");
     zkFusionGetter = await ZkFusionGetterFactory.deploy(
-      await verifier.getAddress(),
-      await commitmentFactory.getAddress()
+      await zkFusionExecutor.getAddress()
     );
     await zkFusionGetter.waitForDeployment();
     
     console.log(`  📋 Verifier deployed at: ${await verifier.getAddress()}`);
     console.log(`  🏭 CommitmentFactory deployed at: ${await commitmentFactory.getAddress()}`);
+    console.log(`  ⚡ zkFusionExecutor deployed at: ${await zkFusionExecutor.getAddress()}`);
     console.log(`  🔗 ZkFusionGetter deployed at: ${await zkFusionGetter.getAddress()}`);
   }
 
@@ -162,7 +232,7 @@ describe("🚨 CRITICAL: True 1inch LOP Integration Test", function () {
     console.log("\n🔬 Testing staticcall gas limit for ZK proof verification...");
     
     // Create a commitment contract
-    const nullHash = generateCommitment4(0n, 0n, ethers.ZeroAddress, ethers.ZeroAddress);
+    const nullHash = await generateCommitment4(0n, 0n, ethers.ZeroAddress, ethers.ZeroAddress);
     const tx = await commitmentFactory.createCommitmentContract(nullHash);
     const receipt = await tx.wait();
     
@@ -174,10 +244,10 @@ describe("🚨 CRITICAL: True 1inch LOP Integration Test", function () {
     commitmentContract = await ethers.getContractAt("BidCommitment", commitmentAddress);
     
     // Initialize with commitments
-    const commitment1 = generateCommitment4(1800n, 100n, bidder1.address, commitmentAddress);
-    const commitment2 = generateCommitment4(1900n, 150n, bidder2.address, commitmentAddress);
-    const commitment3 = generateCommitment4(2000n, 200n, bidder3.address, commitmentAddress);
-    const commitment4 = generateCommitment4(2100n, 250n, owner.address, commitmentAddress);
+    const commitment1 = await generateCommitment4(1800n, 100n, bidder1.address, commitmentAddress);
+    const commitment2 = await generateCommitment4(1900n, 150n, bidder2.address, commitmentAddress);
+    const commitment3 = await generateCommitment4(2000n, 200n, bidder3.address, commitmentAddress);
+    const commitment4 = await generateCommitment4(2100n, 250n, owner.address, commitmentAddress);
     
     const commitments = [commitment1, commitment2, commitment3, commitment4, nullHash, nullHash, nullHash, nullHash];
     
@@ -194,7 +264,7 @@ describe("🚨 CRITICAL: True 1inch LOP Integration Test", function () {
     const makerMinimumPrice = 1850n;
     const makerMaximumAmount = 1000n;
     
-    const circuitInputs = generateCircuitInputs(bids, commitments, makerMinimumPrice, makerMaximumAmount, commitmentAddress);
+    const circuitInputs = await generateCircuitInputs(bids, commitments, makerMinimumPrice, makerMaximumAmount, commitmentAddress);
     const { proof, publicSignals } = await generateZkProof(circuitInputs);
     
     // 🚨 CRITICAL TEST: Measure gas usage for getTakingAmount

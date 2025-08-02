@@ -19,6 +19,10 @@ module.exports = {
   networks: {
     hardhat: {
       chainId: 31337,
+      forking: process.env.ARBITRUM_MAINNET_RPC_URL ? {
+        url: process.env.ARBITRUM_MAINNET_RPC_URL,
+        blockNumber: parseInt(process.env.FORK_BLOCK_NUMBER) || 364175818,
+      } : undefined,
     },
     localhost: {
       url: "http://127.0.0.1:8545",
@@ -30,9 +34,9 @@ module.exports = {
         url: process.env.ARBITRUM_MAINNET_RPC_URL || "https://arb1.arbitrum.io/rpc",
         blockNumber: parseInt(process.env.FORK_BLOCK_NUMBER) || 364175818,
       },
-      chainId: 31337, // Hardhat's default chain ID for forked networks
+      chainId: 42161, // Arbitrum mainnet chain ID
       accounts: {
-        mnemonic: "test test test test test test test test test test test test junk",
+        mnemonic: "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
         count: 10,
       },
     },

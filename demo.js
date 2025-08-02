@@ -18,6 +18,26 @@ const fs = require('fs');
 // Import our validated utilities
 const { generateCircuitInputs } = require("./circuits/utils/input-generator.js");
 const { hashBid } = require("./circuits/utils/poseidon.js");
+const { poseidon4 } = require('poseidon-lite');
+
+/**
+ * Generate 4-input commitment matching circuit format
+ * @param {number} price - Bid price
+ * @param {number} amount - Bid amount
+ * @param {BigInt} bidderAddress - Bidder address as BigInt
+ * @param {BigInt} contractAddress - Contract address as BigInt
+ * @returns {string} - Commitment hash as string
+ */
+async function generateCommitment4(price, amount, bidderAddress, contractAddress) {
+    const inputs = [
+        BigInt(price),
+        BigInt(amount),
+        BigInt(bidderAddress),
+        BigInt(contractAddress)
+    ];
+    const result = poseidon4(inputs);
+    return result.toString();
+}
 
 class zkFusionDemo {
     constructor() {
@@ -141,7 +161,7 @@ class zkFusionDemo {
         if (!this.contracts) throw new Error("Contracts not deployed. Run setup() first.");
         
         // Generate null hash for empty slots
-        const nullHash = await hashBid(0, 0, 0);
+        const nullHash = await generateCommitment4(0, 0, 0n, BigInt(await this.contracts.bidCommitment.getAddress()));
         console.log(`📋 Generated null hash: ${nullHash}`);
         
         // Generate commitments for each bidder
@@ -149,11 +169,13 @@ class zkFusionDemo {
         for (let i = 0; i < this.bidders.length; i++) {
             const bidder = this.bidders[i];
             
-            // Generate Poseidon commitment: hash(price, amount, bidderAddress)
-            const commitment = await hashBid(
+            // Generate Poseidon commitment: hash(price, amount, bidderAddress, contractAddress)
+            // This matches the circuit's 4-input format exactly
+            const commitment = await generateCommitment4(
                 bidder.price,
                 bidder.amount, 
-                BigInt(bidder.address)
+                BigInt(bidder.address),
+                BigInt(await this.contracts.bidCommitment.getAddress())
             );
             
             this.bidders[i].commitment = commitment.toString();
@@ -362,8 +384,8 @@ class zkFusionDemo {
             '0x'
         );
         
-        console.log(`✅ ZkFusionGetter calculated taking amount: ${calculatedTakingAmount}`);
-        console.log(`   Expected (from ZK proof): ${this.auctionResult.totalValue}`);
+        console.log(`✅ ZkFusionGetter calculated taking amount: ${calculatedTakingAmount.toString()}`);
+        console.log(`   Expected (from ZK proof): ${this.auctionResult.totalValue.toString()}`);
         console.log(`   Match: ${calculatedTakingAmount.toString() === this.auctionResult.totalValue.toString() ? '✅ YES' : '❌ NO'}`);
         
         // Display final results

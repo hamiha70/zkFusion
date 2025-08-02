@@ -52,18 +52,24 @@ All infrastructure and integration components are **WORKING PERFECTLY**:
 | **Event Parsing** | ✅ **COMPLETE** | 100% | Fixed topics[1] vs topics[2] issue |
 | **Gas Optimization** | ⚠️ **REQUIRED** | 60% | Need to reduce from 265k to <100k gas |
 
-## 🎯 **IMMEDIATE PRIORITIES** 
+## 🎯 **IMMEDIATE PRIORITIES**
 
-### **CRITICAL PRIORITY #1: Gas Optimization** 
-- **Verify gas measurement accuracy** (forked network vs real staticcall)
-- **Identify gas optimization opportunities** 
-- **Test verifier-only gas usage**
-- **Explore circuit optimization options**
+### **CRITICAL PRIORITY #1: Full `fillOrder` Integration Test** 🚨
+- **Status**: ⚠️ **UNTESTED - CRITICAL GAP**
+- **Goal**: Prove that a 1inch limit order using our ZK-powered `getTakingAmount` can be successfully **filled**.
+- **Action**: Extend `true-1inch-integration.test.js` to:
+    1.  Create and sign a real 1inch limit order.
+    2.  Use `ZkFusionGetter` as the order's getter.
+    3.  Call `lop.fillOrder(...)` and verify token transfers.
 
-### **Priority #2: Complete Demo Implementation**
-- Implement full fillOrder test (currently placeholder)
-- Build React UI interface
-- Prepare testnet deployment scripts
+### **Priority #2: Gas Optimization** 💰
+- **Status**: ✅ **ANALYZED** | ⏳ **POSTPONED**
+- **Finding**: Gas usage (265k) is **not** a `staticcall` blocker but an **economic concern**.
+- **Action**: Implement documented optimizations after the demo is functional.
+
+### **Priority #3: UI/Demo Script Development** 💻
+- **Status**: ⏳ **PENDING**
+- **Action**: Build a minimal UI and a clean `demo.js` script to showcase the end-to-end flow.
 
 ## 🏆 **MAJOR ACHIEVEMENTS CONFIRMED**
 

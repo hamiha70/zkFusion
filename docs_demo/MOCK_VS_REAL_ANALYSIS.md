@@ -25,15 +25,13 @@
 
 ---
 
-## ⚠️ **SINGLE REMAINING CONSTRAINT**
+## ⚠️ **REMAINING MOCKED/INCOMPLETE (1%)**
 
-### **Gas Limit Optimization Required**
-- **Current**: 265,040 gas measured
-- **Required**: <100,000 gas for staticcall
-- **Gap**: 165,040 gas reduction needed
-- **Status**: **ENGINEERING OPTIMIZATION PROBLEM**
-
-**This is NOT a mock vs real issue - it's a gas optimization challenge.**
+### **Order Fulfillment Flow**
+- **Status**: ⚠️ **CRITICAL GAP - UNIMPLEMENTED**
+- **`getTakingAmount` Call**: ✅ **100% REAL** - This part is fully working.
+- **`fillOrder` Call**: ❌ **0% REAL** - The final step of executing the swap has never been tested. We must prove an order using our getter can actually be filled.
+- **Success Criteria**: A successful token swap between the maker and taker, triggered by `lop.fillOrder(...)`.
 
 ---
 

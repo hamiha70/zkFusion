@@ -37,29 +37,24 @@
 
 ---
 
-## 🎯 **EXECUTION PLAN**
+## 🎯 **IMMEDIATE EXECUTION PLAN**
 
-### **Phase 1: Gas Analysis** (Next 2-4 hours)
-```bash
-# 1. Verify measurement accuracy
-npx hardhat test test/gas-verification.test.js
+### **Phase 1: Final Backend Validation** (8-10 hours) 🚨 **CRITICAL PATH**
+- **Action**: Implement the full `fillOrder` integration test.
+- **File**: `test/true-1inch-integration.test.js`
+- **Steps**:
+    1. Create and sign a 1inch limit order.
+    2. Call `lop.fillOrder(...)` using our getter.
+    3. Verify token transfers.
+- **Outcome**: 100% confidence in the end-to-end backend.
 
-# 2. Test verifier-only gas usage  
-npx hardhat test test/verifier-only.test.js
+### **Phase 2: UI and Demo Script** (8-10 hours)
+- **Action**: Build a minimal React UI and a `demo.js` script.
+- **Outcome**: An interactive, story-driven demo for submission.
 
-# 3. Compare local vs forked gas usage
-npx hardhat test test/gas-comparison.test.js
-```
-
-### **Phase 2: Optimization** (If needed)
-- **Circuit optimization**: Reduce constraint count
-- **Contract optimization**: Remove unnecessary operations
-- **Alternative approaches**: Pre-computed proofs, batch verification
-
-### **Phase 3: Final Integration** (1-2 hours)
-- Complete fillOrder test implementation
-- Build React UI interface
-- Prepare deployment scripts
+### **Phase 3: Gas Optimization** (Post-Deadline)
+- **Action**: Implement documented gas-saving measures.
+- **Outcome**: A production-ready, economically viable resolver.
 
 ---
 

@@ -59,15 +59,28 @@ Our testing is structured in five distinct layers, moving from abstract logic to
     5.  Asserts the on-chain state changes correctly.
 -   **Confidence**: **MEDIUM -> HIGH**. This is the final gate before the demo. It will require significant updates as we refactor contracts.
 
----
+### **Layer 6: Full `fillOrder` Integration Test (On-Chain, Forked)**
+
+-   **Goal**: **To prove the complete end-to-end 1inch LOP interaction.** This is the final and most critical test of the entire system.
+-   **Key File**: `test/true-1inch-integration.test.js`
+-   **Status**: ⚠️ **IN PROGRESS - CRITICAL GAP**
+-   **Implementation**:
+    1.  Conduct all setup from Layer 5 on a forked Arbitrum mainnet.
+    2.  Successfully call `getTakingAmount` to calculate the auction result (✅ **This part is DONE**).
+    3.  Create and EIP-712 sign a valid 1inch limit order off-chain.
+    4.  Set our `ZkFusionGetter` contract as the `getTakingAmount` address in the order predicate.
+    5.  Call `lop.fillOrder(...)` with the signed order.
+    6.  Assert that the maker and taker wallets reflect the token swap correctly.
+-   **Confidence**: **CRITICAL**. This test is the ultimate proof of a working demo. Without it, the project is incomplete.
 
 ## ✅ **Validation Checklist for Submission**
 
 To consider the project "validated," the following tests must be passing with the latest code:
 
-1.  [ ] **`test-circuits/functional-validation.test.ts`**: Confirms business logic is sound.
-2.  [ ] **`test-circuits/zkDutchAuction.test.ts`**: Confirms circuit matches business logic.
-3.  [ ] **`test/zkFusion.test.js`**: Confirms the full on-chain system works as expected. 
+1.  [x] **`test-circuits/functional-validation.test.ts`**: Confirms business logic is sound.
+2.  [x] **`test-circuits/zkDutchAuction.test.ts`**: Confirms circuit matches business logic.
+3.  [x] **`test/zkFusion-integration.test.js` & `test/zkFusion-unit.test.js`**: Confirms contract logic is sound.
+4.  [ ] **`test/true-1inch-integration.test.js` (including `fillOrder` call)**: Confirms the full on-chain system works as expected with the real 1inch LOP.
 
 ## 🎉 **PHASE 1 COMPLETE - Circuit Validation SUCCESS**
 

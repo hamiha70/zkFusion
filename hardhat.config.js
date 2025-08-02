@@ -23,6 +23,19 @@ module.exports = {
     localhost: {
       url: "http://127.0.0.1:8545",
     },
+    // Arbitrum Mainnet Fork for True Integration Testing
+    arbitrumMainnetFork: {
+      url: process.env.ARBITRUM_MAINNET_RPC_URL || "https://arb1.arbitrum.io/rpc",
+      forking: {
+        url: process.env.ARBITRUM_MAINNET_RPC_URL || "https://arb1.arbitrum.io/rpc",
+        blockNumber: parseInt(process.env.FORK_BLOCK_NUMBER) || 364175818,
+      },
+      chainId: 31337, // Hardhat's default chain ID for forked networks
+      accounts: {
+        mnemonic: "test test test test test test test test test test test test junk",
+        count: 10,
+      },
+    },
     polygon: {
       url: process.env.POLYGON_RPC_URL || "https://polygon-rpc.com",
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],

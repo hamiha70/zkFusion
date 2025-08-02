@@ -660,7 +660,64 @@ describe("🚨 CRITICAL: True 1inch LOP Integration Test", function () {
       const expectedOrderHash = await oneInchLOP.hashOrder(cleanOrder);
       console.log(`  🔍 Expected order hash: ${expectedOrderHash}`);
       
-      // Try to estimate gas first to get better error info
+      // === ENHANCED ERROR CAPTURE - Method 1: Low-level call ===
+      console.log("  🔍 Method 1: Testing with low-level call...");
+      try {
+        const fillOrderArgsInterface = new ethers.Interface([
+          "function fillOrderArgs((uint256 salt, uint256 maker, uint256 receiver, uint256 makerAsset, uint256 takerAsset, uint256 makingAmount, uint256 takingAmount, uint256 makerTraits) order, bytes32 r, bytes32 vs, uint256 amount, uint256 takerTraits, bytes args) external payable returns (uint256 makingAmount, uint256 takingAmount, bytes32 orderHash)"
+        ]);
+        
+        const calldata = fillOrderArgsInterface.encodeFunctionData("fillOrderArgs", [
+          cleanOrder,
+          r,
+          vs,
+          ethers.parseEther("100"),
+          takerTraits,
+          takingAmountData
+        ]);
+        
+        const lowLevelResult = await owner.call({
+          to: lopAddress,
+          data: calldata,
+          gasLimit: 1000000
+        });
+        
+        console.log(`  ✅ Low-level call succeeded: ${lowLevelResult}`);
+        
+      } catch (lowLevelError) {
+        console.log(`  ❌ Low-level call failed:`, lowLevelError.message);
+        if (lowLevelError.data) {
+          console.log(`  🔍 Low-level error data:`, lowLevelError.data);
+          
+          // Try to decode the error data
+          try {
+            const errorInterface = new ethers.Interface([
+              "error InsufficientBalance()",
+              "error InvalidSignature()",
+              "error OrderExpired()",
+              "error InvalidOrder()",
+              "error TransferFailed()",
+              "error InsufficientAllowance()",
+              "error InvalidMaker()",
+              "error InvalidTaker()",
+              "error OrderAlreadyFilled()",
+              "error InvalidAmount()",
+              "error InvalidExtension()",
+              "error InvalidGetter()",
+              "error CallFailed()",
+              "error ReentrancyGuard()"
+            ]);
+            
+            const decodedError = errorInterface.parseError(lowLevelError.data);
+            console.log(`  🎯 DECODED ERROR:`, decodedError);
+          } catch (decodeError) {
+            console.log(`  ⚠️ Could not decode error data`);
+          }
+        }
+      }
+      
+      // === ENHANCED ERROR CAPTURE - Method 2: Contract call with detailed logging ===
+      console.log("  🔍 Method 2: Testing with contract interface...");
       try {
         const gasEstimate = await oneInchLOP.connect(owner).fillOrderArgs.estimateGas(
           cleanOrder,
@@ -673,11 +730,77 @@ describe("🚨 CRITICAL: True 1inch LOP Integration Test", function () {
         console.log(`  ⛽ Gas estimate: ${gasEstimate.toString()}`);
       } catch (gasError) {
         console.log(`  ❌ Gas estimation failed:`, gasError.message);
+        console.log(`  🔍 Gas error code:`, gasError.code);
+        console.log(`  🔍 Gas error reason:`, gasError.reason);
         if (gasError.data) {
-          console.log(`  🔍 Error data:`, gasError.data);
+          console.log(`  🔍 Gas error data:`, gasError.data);
+        }
+        if (gasError.transaction) {
+          console.log(`  🔍 Gas error transaction:`, gasError.transaction);
         }
       }
       
+      // === ENHANCED ERROR CAPTURE - Method 3: Static call with full context ===
+      console.log("  🔍 Method 3: Testing with static call...");
+      try {
+        const staticResult = await oneInchLOP.connect(owner).fillOrderArgs.staticCall(
+          cleanOrder,
+          r,
+          vs,
+          ethers.parseEther("100"),
+          takerTraits,
+          takingAmountData
+        );
+        console.log(`  ✅ Static call succeeded:`, staticResult);
+      } catch (staticError) {
+        console.log(`  ❌ Static call failed:`, staticError.message);
+        console.log(`  🔍 Static error code:`, staticError.code);
+        console.log(`  🔍 Static error reason:`, staticError.reason);
+        console.log(`  🔍 Static error shortMessage:`, staticError.shortMessage);
+        if (staticError.data) {
+          console.log(`  🔍 Static error data:`, staticError.data);
+        }
+        if (staticError.info) {
+          console.log(`  🔍 Static error info:`, staticError.info);
+        }
+      }
+      
+      // === ENHANCED ERROR CAPTURE - Method 4: Minimal order test ===
+      console.log("  🔍 Method 4: Testing with minimal order (no extensions)...");
+      try {
+        const minimalOrder = {
+          salt: cleanOrder.salt,
+          maker: cleanOrder.maker,
+          receiver: ethers.ZeroAddress, // No receiver
+          makerAsset: cleanOrder.makerAsset,
+          takerAsset: cleanOrder.takerAsset,
+          makingAmount: cleanOrder.makingAmount,
+          takingAmount: cleanOrder.takingAmount,
+          makerTraits: 0n // No traits
+        };
+        
+        const minimalTraits = 0n; // No extension
+        const minimalArgs = "0x"; // No args
+        
+        const minimalStatic = await oneInchLOP.connect(owner).fillOrderArgs.staticCall(
+          minimalOrder,
+          r,
+          vs,
+          ethers.parseEther("100"),
+          minimalTraits,
+          minimalArgs
+        );
+        console.log(`  ✅ Minimal order static call succeeded:`, minimalStatic);
+      } catch (minimalError) {
+        console.log(`  ❌ Minimal order failed:`, minimalError.message);
+        console.log(`  🔍 Minimal error reason:`, minimalError.reason);
+        if (minimalError.data) {
+          console.log(`  🔍 Minimal error data:`, minimalError.data);
+        }
+      }
+      
+      // If we get here, try the actual transaction
+      console.log("  🔄 Attempting actual fillOrderArgs transaction...");
       const fillTx = await oneInchLOP.connect(owner).fillOrderArgs(
         cleanOrder,
         r,
@@ -693,6 +816,9 @@ describe("🚨 CRITICAL: True 1inch LOP Integration Test", function () {
       
     } catch (error) {
       console.log(`  ❌ fillOrderArgs failed:`, error.message);
+      console.log(`  🔍 Error code:`, error.code);
+      console.log(`  🔍 Error reason:`, error.reason);
+      console.log(`  🔍 Error shortMessage:`, error.shortMessage);
       
       // Try to get more detailed error information
       if (error.data) {
@@ -707,21 +833,8 @@ describe("🚨 CRITICAL: True 1inch LOP Integration Test", function () {
         console.log(`  🔍 Receipt:`, error.receipt);
       }
       
-      // Try a static call to get the revert reason
-      try {
-        await oneInchLOP.connect(owner).fillOrderArgs.staticCall(
-          cleanOrder,
-          r,
-          vs,
-          ethers.parseEther("100"),
-          takerTraits,
-          takingAmountData
-        );
-      } catch (staticError) {
-        console.log(`  🔍 Static call error:`, staticError.message);
-        if (staticError.data) {
-          console.log(`  🔍 Static call error data:`, staticError.data);
-        }
+      if (error.info) {
+        console.log(`  🔍 Error info:`, error.info);
       }
       
       throw error; // Re-throw to fail the test

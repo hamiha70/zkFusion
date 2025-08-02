@@ -231,9 +231,8 @@ describe("🚨 CRITICAL: True 1inch LOP Integration Test", function () {
   it("🚨 CRITICAL: Should verify staticcall gas limit for ZK proof verification", async function () {
     console.log("\n🔬 Testing staticcall gas limit for ZK proof verification...");
     
-    // Create a commitment contract
-    const nullHash = await generateCommitment4(0n, 0n, ethers.ZeroAddress, ethers.ZeroAddress);
-    const tx = await commitmentFactory.createCommitmentContract(nullHash);
+    // Create a commitment contract (no parameters needed)
+    const tx = await commitmentFactory.createCommitmentContract();
     const receipt = await tx.wait();
     
     // Parse the CommitmentCreated event
@@ -243,15 +242,21 @@ describe("🚨 CRITICAL: True 1inch LOP Integration Test", function () {
     const commitmentAddress = ethers.getAddress("0x" + commitmentCreatedEvent.topics[2].slice(26));
     commitmentContract = await ethers.getContractAt("BidCommitment", commitmentAddress);
     
-    // Initialize with commitments
+    // Generate commitments for initialization
+    const nullHash = await generateCommitment4(0n, 0n, ethers.ZeroAddress, commitmentAddress);
     const commitment1 = await generateCommitment4(1800n, 100n, bidder1.address, commitmentAddress);
     const commitment2 = await generateCommitment4(1900n, 150n, bidder2.address, commitmentAddress);
     const commitment3 = await generateCommitment4(2000n, 200n, bidder3.address, commitmentAddress);
     const commitment4 = await generateCommitment4(2100n, 250n, owner.address, commitmentAddress);
     
-    const commitments = [commitment1, commitment2, commitment3, commitment4, nullHash, nullHash, nullHash, nullHash];
+    // Initialize the contract with nullHash and initial commitments
+    await commitmentContract.initialize(
+      nullHash,
+      [bidder1.address, bidder2.address, bidder3.address, owner.address],
+      [commitment1, commitment2, commitment3, commitment4]
+    );
     
-    await commitmentContract.initializeCommitments(commitments);
+    const commitments = [commitment1, commitment2, commitment3, commitment4, nullHash, nullHash, nullHash, nullHash];
     
     // Generate ZK proof
     const bids = [
@@ -270,26 +275,66 @@ describe("🚨 CRITICAL: True 1inch LOP Integration Test", function () {
     // 🚨 CRITICAL TEST: Measure gas usage for getTakingAmount
     console.log("  📊 Measuring gas usage for getTakingAmount (with ZK proof verification)...");
     
+    // Debug the proof and public signals
+    console.log(`  🔍 Proof array length: ${proof.length}`);
+    console.log(`  🔍 Proof values: ${proof.map(v => v ? 'OK' : 'NULL').join(', ')}`);
+    console.log(`  🔍 PublicSignals length: ${publicSignals.length}`);
+    console.log(`  🔍 PublicSignals values: ${publicSignals.map(v => v ? 'OK' : 'NULL').join(', ')}`);
+    
     // Create extension data for getTakingAmount
+    // Format: Proof struct, uint256[3] publicSignals, uint256[8] originalWinnerBits, address commitmentContract
+    const proofStruct = {
+      a: [proof[0], proof[1]],
+      b: [[proof[2], proof[3]], [proof[4], proof[5]]],
+      c: [proof[6], proof[7]]
+    };
+    
+    // Generate originalWinnerBits (8 bits representing which bids won)
+    // For our test: first 4 bids are real, last 4 are null
+    const originalWinnerBits = [1, 1, 1, 1, 0, 0, 0, 0]; // First 4 won, last 4 didn't
+    
     const extensionData = ethers.AbiCoder.defaultAbiCoder().encode(
-      ["address", "uint256[8]", "uint256[2]", "uint256[2]", "uint256[2]", "uint256[2]"],
+      ["tuple(uint256[2] a, uint256[2][2] b, uint256[2] c)", "uint256[3]", "uint256[8]", "address"],
       [
-        commitmentAddress,
-        proof,
-        [publicSignals[0], publicSignals[1]], // a
-        [publicSignals[2], publicSignals[3]], // b
-        [publicSignals[4], publicSignals[5]], // c
-        [publicSignals[6], publicSignals[7]]  // public inputs
+        proofStruct,
+        publicSignals,
+        originalWinnerBits,
+        commitmentAddress
       ]
     );
     
     // Test the gas usage
     const makingAmount = ethers.parseEther("100"); // 100 WETH
     
+    // Create a minimal 1inch Order struct for testing
+    // Note: Most fields can be dummy values since our contract only uses the extension
+    const dummyOrder = {
+      salt: 1,
+      maker: owner.address,
+      receiver: ethers.ZeroAddress,
+      makerAsset: WETH_ADDRESS,
+      takerAsset: USDC_ADDRESS,
+      makingAmount: makingAmount,
+      takingAmount: 0, // Will be calculated
+      makerAssetData: "0x",
+      takerAssetData: "0x",
+      getMakingAmount: "0x",
+      getTakingAmount: "0x",
+      predicate: "0x",
+      permit: "0x",
+      preInteraction: "0x",
+      postInteraction: "0x"
+    };
+    
     // 🚨 This is the critical test - does it fit within staticcall gas limits?
     const gasEstimate = await zkFusionGetter.getTakingAmount.estimateGas(
-      makingAmount,
-      extensionData
+      dummyOrder,           // order
+      extensionData,        // extension  
+      ethers.ZeroHash,      // orderHash
+      bidder1.address,      // taker
+      makingAmount,         // makingAmount
+      makingAmount,         // remainingMakingAmount  
+      "0x"                  // extraData
     );
     
     console.log(`  ⛽ Gas estimate for getTakingAmount: ${gasEstimate.toString()}`);

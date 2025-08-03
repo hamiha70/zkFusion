@@ -1,0 +1,71 @@
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-zk-dark text-white font-sans;
+    background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+  }
+}
+
+@layer components {
+  .sparkle-text {
+    @apply relative inline-block;
+  }
+  
+  .sparkle-text::before {
+    content: "✨";
+    @apply absolute -left-6 top-0 text-zk-accent animate-pulse-slow;
+  }
+  
+  .sparkle-text::after {
+    content: "✨";
+    @apply absolute -right-6 top-0 text-zk-gold animate-pulse-slow;
+    animation-delay: 1.5s;
+  }
+  
+  .card-glow {
+    @apply bg-zk-light/5 border border-zk-primary/20 rounded-xl backdrop-blur-sm;
+    box-shadow: 0 0 20px rgba(99, 102, 241, 0.1);
+  }
+  
+  .card-glow-accent {
+    @apply bg-zk-accent/5 border border-zk-accent/30 rounded-xl backdrop-blur-sm;
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.15);
+  }
+  
+  .status-success {
+    @apply bg-zk-secondary/10 text-zk-secondary border border-zk-secondary/30 px-3 py-1 rounded-full text-sm font-medium;
+  }
+  
+  .status-processing {
+    @apply bg-zk-primary/10 text-zk-primary border border-zk-primary/30 px-3 py-1 rounded-full text-sm font-medium animate-pulse;
+  }
+  
+  .status-pending {
+    @apply bg-zk-accent/10 text-zk-accent border border-zk-accent/30 px-3 py-1 rounded-full text-sm font-medium;
+  }
+  
+  .sparkle-button {
+    @apply bg-gradient-to-r from-zk-primary to-zk-purple hover:from-zk-purple hover:to-zk-primary 
+           text-white font-semibold py-2 px-4 rounded-lg transition-all duration-300 
+           hover:scale-105 hover:shadow-lg relative overflow-hidden;
+  }
+  
+  .sparkle-button::before {
+    content: "✨";
+    @apply absolute left-2 top-1/2 transform -translate-y-1/2 opacity-70;
+  }
+  
+  .mono-address {
+    @apply font-mono text-sm bg-zk-dark/50 px-2 py-1 rounded border border-zk-primary/20;
+  }
+  
+  .gradient-text {
+    @apply bg-gradient-to-r from-zk-accent via-zk-gold to-zk-accent bg-clip-text text-transparent;
+  }
+}

@@ -560,7 +560,7 @@ describe("🚨 CRITICAL: True 1inch LOP Integration Test", function () {
     console.log(`  🔍 Using ZkFusionGetter at: ${getterAddress}`);
 
     // === STEP 4: Build and sign the 1inch limit order ===
-    const chainId = (await ethers.provider.getNetwork()).chainId;
+    const chainId = 42161; // Use contract's preferred chainId, not network's chainId
     const lopAddress = await oneInchLOP.getAddress();
     
     // Create an order where:

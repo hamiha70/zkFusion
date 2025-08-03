@@ -4,8 +4,39 @@ const snarkjs = require("snarkjs");
 const fs = require("fs");
 require("dotenv").config();
 
-// Helper function to pause for user input
-const prompt = (question) => {
+// Parse command line arguments
+const args = process.argv.slice(2);
+const isDocMode = args.includes('--doc') || args.includes('--documentation');
+const outputFile = args.find(arg => arg.startsWith('--output='))?.split('=')[1] || 'demo-output.md';
+
+// Logging setup
+let logContent = '';
+const originalConsoleLog = console.log;
+const originalConsoleClear = console.clear;
+
+if (isDocMode) {
+  // Override console functions for documentation mode
+  console.log = (...args) => {
+    const message = args.join(' ');
+    logContent += message + '\n';
+    originalConsoleLog(...args);
+  };
+  
+  console.clear = () => {
+    // In doc mode, don't clear - just add a separator
+    logContent += '\n---\n\n';
+    originalConsoleLog('\n---\n');
+  };
+}
+
+// Helper function to pause for user input (or auto-continue in doc mode)
+const prompt = async (question) => {
+  if (isDocMode) {
+    console.log(`[AUTO-CONTINUE] ${question}`);
+    await new Promise(resolve => setTimeout(resolve, 500)); // Small delay for readability
+    return '';
+  }
+  
   const readline = require('readline').createInterface({
     input: process.stdin,
     output: process.stdout,
@@ -21,6 +52,11 @@ async function main() {
   console.clear();
   console.log("Welcome to the zkFusion Interactive Demo!");
   console.log("========================================");
+  if (isDocMode) {
+    console.log("🤖 DOCUMENTATION MODE: Auto-progressing through demo, output will be saved to markdown file.");
+  } else {
+    console.log("🎮 INTERACTIVE MODE: Press Enter at each step to continue through the demo.");
+  }
   console.log("This script will walk you through our groundbreaking ZK-powered Dutch Auction system for the 1inch Limit Order Protocol.");
   await prompt("Press Enter to begin...");
 
@@ -268,9 +304,9 @@ async function main() {
     ]);
     
     console.log("\n  •\t📦 Order `extension` Field Assembled:");
-    console.log(`\t   - The order's `extension` is a key part of the 1inch LOP v4.`);
-    console.log(`\t   - It starts with a 20-byte address of our custom `ZkFusionGetter` contract.`);
-    console.log(`\t   - The rest of the data is our ABI-encoded ZK proof and auction metadata.`);
+    console.log("\t   - The order's `extension` is a key part of the 1inch LOP v4.");
+    console.log("\t   - It starts with a 20-byte address of our custom `ZkFusionGetter` contract.");
+    console.log("\t   - The rest of the data is our ABI-encoded ZK proof and auction metadata.");
     console.log(`\t   - Total Size: ${fullExtensionData.length} bytes.`);
     console.log(`\t   - Data Preview: ${fullExtensionData.substring(0, 66)}...`);
 
@@ -328,8 +364,45 @@ async function main() {
 }
 
 main()
-  .then(() => {})
+  .then(() => {
+    if (isDocMode) {
+      // Write the complete log to markdown file
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const finalOutputFile = outputFile.replace('.md', `-${timestamp}.md`);
+      
+      const markdownContent = `# zkFusion Demo Run - ${new Date().toLocaleString()}
+
+This document contains the complete output from running the zkFusion interactive demo in documentation mode.
+
+Generated with: \`npm run demo -- --doc --output=${outputFile}\`
+
+---
+
+${logContent}
+
+---
+
+**Demo completed at:** ${new Date().toLocaleString()}
+**Output file:** ${finalOutputFile}
+`;
+      
+      fs.writeFileSync(finalOutputFile, markdownContent);
+      originalConsoleLog(`\n📝 Documentation saved to: ${finalOutputFile}`);
+    }
+  })
   .catch(error => {
     console.error(error);
+    if (isDocMode && logContent) {
+      // Save partial log even if there was an error
+      const errorOutputFile = outputFile.replace('.md', '-ERROR.md');
+      fs.writeFileSync(errorOutputFile, `# zkFusion Demo Run (ERROR) - ${new Date().toLocaleString()}
+
+${logContent}
+
+**ERROR:**
+${error.stack}
+`);
+      originalConsoleLog(`\n📝 Partial documentation saved to: ${errorOutputFile}`);
+    }
     process.exit(1);
-  }); 
+  });

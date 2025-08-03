@@ -152,64 +152,41 @@ The breakthrough with `fillOrderArgs` integration represents the culmination of 
 # 🎯 zkFusion Project Status - COMPREHENSIVE ASSESSMENT
 
 **Date**: August 2, 2025  
-**Status**: CRITICAL DEBUGGING PHASE - fillOrderArgs Transaction Revert  
-**Overall Confidence**: 70% (Technical Infrastructure) / 0% (Order Execution)
+**Status**: CRITICAL PIVOT - Correct Target Identified
+**Overall Confidence**: 50% (Technical Infrastructure) / 0% (Order Execution)
 
 ---
 
-## 🚨 CURRENT CRITICAL ISSUE
+## 🚨 CURRENT SITUATION: MAJOR CORRECTION
 
-**PROBLEM**: `fillOrderArgs` transaction reverts without reason string
-- ❌ **Error**: `Transaction reverted without a reason string`
-- ❌ **Error Data**: `0x` (no actual revert reason captured)
-- ❌ **Gas Estimation**: Also fails with same error
-- ❌ **Static Call**: Also fails with same error
+**PREVIOUSLY WRONG ASSUMPTION**: We were targeting a non-existent or incorrect contract (`...a65` on a bad fork, then `...97d` which is V4).
 
-**ROOT CAUSE**: Unknown - requires deep debugging
+**NEW GROUND TRUTH**:
+- ✅ **The Limit Order Protocol is a FEATURE of the 1inch Aggregation Router, not a separate contract.**
+- ✅ **Our correct target is the `1inch: Aggregation Router V6` contract at `0x111111125421ca6dc452d289314280a0f8842a65` on Arbitrum.**
+- 🛑 **Our primary blocker is a `BadSignature` error.** This is an EIP-712 signing issue, likely caused by using the wrong domain separator from our previous incorrect target.
 
 ---
 
 ## ✅ CONFIRMED WORKING COMPONENTS
 
-### 1. Infrastructure (100% ✅)
-- **Arbitrum Mainnet Forking**: Block 364175818, stable RPC
+### 1. Infrastructure (90% ✅)
+- **Arbitrum Mainnet Forking**: Block 364175818 (confirmed to be after V6 deployment)
 - **Account Funding**: All whale transfers successful (ETH, WETH, USDC)
-- **Contract Deployment**: All ZK Fusion contracts deployed successfully
-- **1inch LOP Connection**: Correct official address `0x111111125421ca6dc452d289314280a0f8642a65`
+- **Contract Deployment**: All ZK Fusion contracts deploy successfully.
+- **1inch LOP Connection**: **Now correctly targeting Aggregation Router V6.**
 
 ### 2. ZK Proof Pipeline (100% ✅)
 - **Circuit Compilation**: zkDutchAuction8.circom working
-- **Proof Generation**: 75 circuit inputs, valid ZK proof generation
-- **Commitment Contracts**: Creation and initialization working
-- **Hash Functions**: Poseidon4 alignment confirmed
-
-### 3. Order Building (80% ✅)
-- **Order Hash**: `hashOrder` function now working (returns valid hash)
-- **EIP-712 Signature**: Order signing successful
-- **ABI Compatibility**: Fixed uint256 types for Address/MakerTraits
-- **Token Approvals**: WETH (maker) and USDC (taker) approvals sufficient
+- **Proof Generation**: Valid ZK proof generation pipeline is intact.
 
 ---
 
 ## ❌ CRITICAL FAILURES
 
-### 1. Order Execution (0% ❌)
-- **fillOrderArgs**: Complete transaction revert
-- **Error Diagnosis**: No actual revert reason captured
-- **Gas Estimation**: Fails before execution
-- **Static Call**: Also fails with same error
-
----
-
-## 🔍 UNKNOWN FACTORS (REQUIRE INVESTIGATION)
-
-### Potential Root Causes:
-1. **Order Validation**: Our order struct might not match 1inch's exact expectations
-2. **Signature Issues**: EIP-712 domain, types, or signature format problems
-3. **Extension Data**: takingAmountData (1322 bytes) format incompatibility
-4. **takerTraits Encoding**: Extension length encoding might be wrong
-5. **1inch Internal Logic**: Unknown validation rules or preconditions
-6. **Asset Transfer Flow**: Hidden issues in token transfer logic
+### 1. Order Signing & Execution (0% ❌)
+- **EIP-712 Signature**: The signature we generate is invalid for the target contract, causing a `BadSignature` revert.
+- **`fillOrderArgs` Execution**: Fails because the signature is invalid. This is the root cause of all downstream failures.
 
 ---
 
@@ -217,76 +194,44 @@ The breakthrough with `fillOrderArgs` integration represents the culmination of 
 
 | Component | Status | Confidence | Notes |
 |-----------|---------|------------|-------|
-| **ZK Circuit & Proofs** | ✅ COMPLETE | 100% | All tests passing |
-| **Contract Infrastructure** | ✅ COMPLETE | 100% | Deployment & setup working |
-| **1inch LOP Connection** | ✅ COMPLETE | 100% | Correct address & ABI |
-| **Order Building** | 🟡 PARTIAL | 80% | Hash works, execution fails |
-| **Order Execution** | ❌ FAILED | 0% | Complete transaction revert |
-| **Token Handling** | ✅ COMPLETE | 100% | Approvals & balances correct |
-| **Error Handling** | ❌ INADEQUATE | 20% | Can't capture actual revert reason |
+| **ZK Circuit & Proofs** | ✅ COMPLETE | 100% | All tests passing. |
+| **Contract Infrastructure** | ✅ COMPLETE | 100% | ZK-Fusion contracts deploy correctly. |
+| **1inch LOP Connection** | 🟡 PIVOTED | 80% | **Correct V6 Router identified.** ABI seems compatible. |
+| **Order Building & Signing** | ❌ FAILED | 10% | **This is the critical failure.** Signature does not match V6 router's expectations. |
+| **Order Execution** | ❌ BLOCKED | 0% | Blocked by `BadSignature` error. |
+| **Token Handling** | ✅ COMPLETE | 100% | Approvals & balances logic is correct, just needs the right target. |
 
 ---
 
 ## 🎯 IMMEDIATE PRIORITIES
 
-### Critical Priority #1: Diagnose fillOrderArgs Failure
-- **Objective**: Get actual revert reason from 1inch LOP contract
-- **Methods**: Enhanced error capture, minimal order testing, source code analysis
-- **Timeline**: URGENT - 21 hours to hackathon deadline
-
-### Priority #2: Order Structure Validation
-- **Objective**: Ensure our order matches 1inch's exact expectations
-- **Methods**: Compare with working examples, validate EIP-712 domain
-- **Timeline**: After Priority #1
-
-### Priority #3: Extension Data Format
-- **Objective**: Verify takingAmountData format compatibility
-- **Methods**: Test without extensions first, analyze 1inch's extension handling
-- **Timeline**: After Priority #2
-
----
-
-## 📈 PROGRESS ASSESSMENT
-
-### Major Achievements:
-- ✅ **Infrastructure Breakthrough**: Full mainnet forking with real contracts
-- ✅ **ZK Pipeline**: Complete end-to-end proof generation
-- ✅ **Contract Integration**: All ZK Fusion contracts working
-- ✅ **1inch Connection**: Correct contract address and ABI compatibility
-
-### Critical Remaining Work:
-- ❌ **Order Execution**: Complete failure requiring root cause analysis
-- ❌ **Error Diagnosis**: Need actual revert reasons, not generic failures
-- ❌ **Demo Completion**: Cannot proceed until order execution works
+### Critical Priority #1: Fix the EIP-712 `BadSignature` Error
+- **Objective**: Generate a valid signature that the `AggregationRouterV6` contract will accept.
+- **Methods**:
+    1.  **Find Correct Domain Separator**: Programmatically read the EIP-712 domain from the V6 router contract on our forked chain. The domain includes `name`, `version`, `chainId`, and `verifyingContract`.
+    2.  **Verify `Order` Struct**: Meticulously re-verify our JavaScript `Order` struct against the V6 router's ABI on Arbiscan to ensure perfect alignment.
+    3.  **Implement & Test**: Update the `signOrder` utility in `test/true-1inch-integration.test.js` with the correct domain and re-run the test, expecting to get past the `BadSignature` error. A `Not enough allowance` error would be a sign of progress.
 
 ---
 
 ## ⏰ TIME ASSESSMENT
 
-**Remaining Time**: 21 hours until hackathon deadline  
-**Current Blocker**: fillOrderArgs transaction revert  
-**Risk Level**: HIGH - Core functionality not working  
+**Remaining Time**: ~9 hours until hackathon deadline  
+**Current Blocker**: `BadSignature` error
+**Risk Level**: HIGH - Core functionality is broken at the signing level.
 
 **Realistic Timeline**:
-- **Next 4-6 hours**: Debug and fix fillOrderArgs issue
-- **Following 2-3 hours**: Complete demo implementation
-- **Final 2-3 hours**: UI polish and testing
-- **Buffer**: 10+ hours for unexpected issues
+- **Next 2-3 hours**: Fix `BadSignature` error. This is a focused, technical task.
+- **Following 2-3 hours**: Achieve a successful `fillOrderArgs` transaction.
+- **Final 4 hours**: Assemble the final demo script and record the video.
 
 ---
 
 ## 🎯 SUCCESS METRICS
 
 ### Demo Success Requirements:
-- [ ] fillOrderArgs transaction successful
-- [ ] Token transfers executed correctly
-- [ ] ZK proof verification in 1inch flow
-- [ ] End-to-end demo script working
-- [ ] UI demonstration ready
+- [ ] Generate a **valid signature** for the Aggregation Router V6.
+- [ ] Execute a successful `fillOrderArgs` transaction on the forked network.
+- [ ] Demonstrate the end-to-end ZK-Dutch-Auction flow.
 
-### Current Achievement:
-**70% Complete** - Infrastructure solid, execution blocked
-
----
-
-*Last Updated: August 2, 2025 - Post-fillOrderArgs debugging session* 
+*Last Updated: August 2, 2025 - Post-Correction & Pivot* 

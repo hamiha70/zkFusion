@@ -217,7 +217,7 @@ async function main() {
     console.clear();
     console.log("PHASE 2.5: Generating the Zero-Knowledge Proof");
     console.log("----------------------------------------------");
-    console.log("This is the magic. We use a Poseidon hash to create a commitment for each bid. Then, the Circom circuit processes these commitments and the auction rules to generate a Groth16 proof.\n");
+    console.log("This is the magic. We use a Poseidon hash to create a commitment for each bid (amount, price, bidderAddress,commitmentContractAddress). Then, the Circom circuit processes these commitments and the auction rules to generate a Groth16 proof.\n");
     
     // Generate commitments
     console.log("🔐 Hashing Bids into Commitments (these bind the Auction Runner):");
@@ -380,7 +380,7 @@ async function main() {
     console.log("  •\tOrder Building & Extension: ~28,000 gas (CONSTANT)");
     console.log("  •\tTotal Transaction Cost: ~472,000 gas");
     console.log("\n📊 **Scaling Analysis:**");
-    console.log("  •\t🔧 Circuit Complexity: ~14,311 constraints (estimated for N=8 bids)");
+    console.log("  •\t🔧 Circuit Complexity: ~14,311 constraints (for N=8 maximum bids)");
     console.log("  •\t⚡ Verification Gas: CONSTANT (~35k) regardless of max bid count");
     console.log("  •\t📈 Total Transaction Cost: LINEAR scaling with max bid count");
     console.log("  •\t⏱️  Prover Time: QUADRATIC scaling with max bid count");
@@ -430,6 +430,12 @@ async function main() {
     console.log("  •\tAdvanced Features: Compliant bid validation, DoS prevention, parametrized auction timing");
     console.log("  •\tAuto-triggering: Automatic settlement when bid capacity is reached");
     console.log("  •\tBatch Processing: Multiple auctions in single transaction");
+    console.log("  •\tFrontend: Full integration with the live blockchain with ethers.js");
+    
+    console.log("\n✅ **Frontend:**");
+    console.log("       - Visualization of the intents and auction results.");
+    console.log("       - Visualization of the ZK proof generation and verification.");
+    console.log("       - Visualization of the 1inch Limit Order and settlement.");
     
     console.log("\n🎉 **Conclusion:** zkFusion successfully pioneers the integration of ZK-SNARKs with the 1inch LOP, creating a powerful new primitive for trustless, efficient, and complex DeFi auctions. The core innovation is complete and demonstrably functional.\n");
     

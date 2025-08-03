@@ -10,22 +10,22 @@ const UnifiedDashboard = () => {
 
   return (
     <div className="h-screen flex flex-col">
-      {/* Main 3-column layout */}
-      <div className="flex-1 grid grid-cols-3 gap-4 p-4">
+      {/* Main 3-column layout - optimized for 4K */}
+      <div className="flex-1 grid grid-cols-3 gap-6 p-6">
         
         {/* LEFT SECTION: Maker Intent Dashboard */}
         <div className="card-glow space-y-4">
           <div className="flex items-center space-x-2 border-b border-zk-primary/20 pb-3">
-            <Gavel className="text-zk-accent" size={18} />
-            <h2 className="text-lg font-bold text-white">✨ Maker Intent</h2>
+            <Gavel className="text-zk-accent" size={20} />
+            <h2 className="text-xl font-bold text-white">✨ Maker Intent</h2>
           </div>
 
           {/* Intent Configuration */}
           <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-zk-accent flex items-center">
+            <h3 className="text-base font-semibold text-zk-accent flex items-center">
               <span>✨ Intent Configuration</span>
             </h3>
-            <div className="card-glow-accent p-3 space-y-2 text-sm">
+            <div className="card-glow-accent p-3 space-y-2 text-base">
               <div className="flex justify-between">
                 <span className="text-gray-400">Asset Pair:</span>
                 <span className="font-semibold text-white">{auction.asset} → {auction.targetAsset}</span>
@@ -106,43 +106,43 @@ const UnifiedDashboard = () => {
           </div>
         </div>
 
-        {/* MIDDLE SECTION: Live Auction */}
+        {/* MIDDLE SECTION: ZK Dutch Auction Results */}
         <div className="card-glow space-y-4">
-          <div className="flex items-center space-x-2 border-b border-indigo-500/20 pb-3">
-            <Target className="text-indigo-400" size={18} />
-            <h2 className="text-lg font-bold text-white">✨ Live Auction</h2>
+          <div className="flex items-center space-x-2 border-b border-zk-primary/20 pb-3">
+            <Target className="text-zk-primary" size={20} />
+            <h2 className="text-xl font-bold text-white">✨ ZK Dutch Auction Results</h2>
           </div>
 
           {/* Auction Overview */}
-          <div className="text-center p-3 card-glow-accent">
-            <div className="text-xl font-bold gradient-text">
+          <div className="text-center p-4 card-glow-accent">
+            <div className="text-2xl font-bold gradient-text">
               {auction.amount} {auction.asset}
             </div>
-            <div className="text-xs text-gray-400">
+            <div className="text-sm text-gray-300">
               @ ≥{auction.minPrice} {auction.targetAsset}/{auction.asset}
             </div>
           </div>
 
           {/* Winning Bids */}
           <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-emerald-400 flex items-center justify-between">
+            <h3 className="text-base font-semibold text-zk-secondary flex items-center justify-between">
               <span className="flex items-center">
-                <TrendingUp size={16} />
+                <TrendingUp size={18} />
                 <span className="ml-1">Winning Bids ✨</span>
               </span>
-              <span className="text-xs text-gray-400">(reordered by price)</span>
+              <span className="text-sm text-gray-300">(reordered by price)</span>
             </h3>
-            <div className="space-y-2 max-h-40 overflow-y-auto">
+            <div className="space-y-3">
               {winningBids.map((bid) => (
-                <div key={bid.id} className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-2">
-                  <div className="flex items-center justify-between mb-1">
+                <div key={bid.id} className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3">
+                  <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center space-x-1">
-                      <span className="text-emerald-400 font-semibold text-sm">Bid #{bid.id}</span>
-                      <span className="text-xs">✨</span>
+                      <span className="text-emerald-400 font-semibold text-base">Bid #{bid.id}</span>
+                      <span className="text-sm">✨</span>
                     </div>
-                    <span className="status-success text-xs">WINNING</span>
+                    <span className="status-success text-sm">WINNING</span>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="grid grid-cols-2 gap-2 text-sm">
                     <div>
                       <span className="text-gray-400">Amount: </span>
                       <span className="font-semibold text-white">{bid.amount} WETH</span>
@@ -152,9 +152,9 @@ const UnifiedDashboard = () => {
                       <span className="font-semibold text-emerald-400">{bid.price} USDC/WETH</span>
                     </div>
                   </div>
-                  <div className="mt-1 text-xs">
+                  <div className="mt-2 text-sm">
                     <span className="text-gray-400">Bidder: </span>
-                    <span className="mono-address text-xs">{bid.bidder.slice(0, 10)}...</span>
+                    <span className="mono-address text-sm">{bid.bidder.slice(0, 10)}...</span>
                   </div>
                 </div>
               ))}
@@ -162,18 +162,18 @@ const UnifiedDashboard = () => {
           </div>
 
           {/* Losing Bids */}
-          <div className="space-y-2">
-            <h3 className="text-sm font-semibold text-gray-400">Losing Bids</h3>
-            <div className="space-y-1 max-h-32 overflow-y-auto">
+          <div className="space-y-3">
+            <h3 className="text-base font-semibold text-gray-400">Losing Bids</h3>
+            <div className="space-y-2">
               {losingBids.map((bid) => (
-                <div key={bid.id} className="bg-gray-800/50 border border-gray-600/30 rounded-lg p-2 opacity-60">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-gray-400 font-semibold text-sm">Bid #{bid.id}</span>
-                    <span className="text-xs text-red-400 bg-red-400/10 px-1 py-0.5 rounded">
+                <div key={bid.id} className="bg-gray-800/50 border border-gray-600/30 rounded-lg p-3 opacity-70">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-gray-400 font-semibold text-base">Bid #{bid.id}</span>
+                    <span className="text-sm text-red-400 bg-red-400/10 px-2 py-1 rounded">
                       {bid.reason}
                     </span>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="grid grid-cols-2 gap-2 text-sm">
                     <div>
                       <span className="text-gray-500">Amount: </span>
                       <span className="text-gray-300">{bid.amount} WETH</span>
@@ -191,9 +191,9 @@ const UnifiedDashboard = () => {
 
         {/* RIGHT SECTION: ZK Settlement */}
         <div className="card-glow space-y-4">
-          <div className="flex items-center space-x-2 border-b border-indigo-500/20 pb-3">
-            <Zap className="text-amber-400" size={18} />
-            <h2 className="text-lg font-bold text-white">✨ ZK Settlement</h2>
+          <div className="flex items-center space-x-2 border-b border-zk-primary/20 pb-3">
+            <Zap className="text-zk-accent" size={20} />
+            <h2 className="text-xl font-bold text-white">✨ ZK Settlement</h2>
           </div>
 
           {/* ZK Proof Status */}

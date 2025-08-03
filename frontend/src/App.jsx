@@ -31,7 +31,8 @@ function App() {
         </header>
 
         {/* Single Unified Dashboard */}
-        <main className="container mx-auto px-6 py-8">
+        {/* Main Content - Full Height */}
+        <main className="flex-1">
           <UnifiedDashboard />
         </main>
 

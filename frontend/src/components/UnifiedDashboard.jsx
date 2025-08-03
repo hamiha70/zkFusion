@@ -9,305 +9,293 @@ const UnifiedDashboard = () => {
   const losingBids = bids.filter(bid => bid.status === 'losing')
 
   return (
-    <div className="grid grid-cols-3 gap-8 h-full">
-      
-      {/* LEFT SECTION: Maker Intent Dashboard */}
-      <div className="card-glow p-6 space-y-6">
-        <div className="flex items-center space-x-3 border-b border-zk-primary/20 pb-4">
-          <Gavel className="text-zk-accent" size={24} />
-          <h2 className="text-xl font-bold sparkle-text">Maker Intent</h2>
-        </div>
-
-        {/* Intent Configuration */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-zk-accent flex items-center">
-            <span>✨</span>
-            <span className="ml-2">Intent Configuration</span>
-          </h3>
-          <div className="card-glow-accent p-4 space-y-3">
-            <div className="flex justify-between">
-              <span className="text-gray-400">Asset Pair:</span>
-              <span className="font-semibold">{auction.asset} → {auction.targetAsset}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Selling:</span>
-              <span className="font-semibold text-zk-secondary">{auction.amount} {auction.asset}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Minimum Price:</span>
-              <span className="font-semibold text-zk-accent">{auction.minPrice} {auction.targetAsset}/{auction.asset}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Max Bidders:</span>
-              <span className="font-semibold">{auction.maxBidders}</span>
-            </div>
+    <div className="h-screen flex flex-col">
+      {/* Main 3-column layout */}
+      <div className="flex-1 grid grid-cols-3 gap-4 p-4">
+        
+        {/* LEFT SECTION: Maker Intent Dashboard */}
+        <div className="card-glow space-y-4">
+          <div className="flex items-center space-x-2 border-b border-zk-primary/20 pb-3">
+            <Gavel className="text-zk-accent" size={18} />
+            <h2 className="text-lg font-bold text-white">✨ Maker Intent</h2>
           </div>
-        </div>
 
-        {/* Infrastructure Status */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-zk-secondary flex items-center">
-            <Shield size={18} />
-            <span className="ml-2">Infrastructure Status</span>
-            <span className="ml-2">✨</span>
-          </h3>
-          <div className="space-y-2 text-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-gray-400">Commitment Factory:</span>
-              <div className="flex items-center space-x-2">
-                <span className="mono-address">{contracts.factory.slice(0, 10)}...</span>
-                <span className="status-success">DEPLOYED</span>
+          {/* Intent Configuration */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold text-zk-accent flex items-center">
+              <span>✨ Intent Configuration</span>
+            </h3>
+            <div className="card-glow-accent p-3 space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-400">Asset Pair:</span>
+                <span className="font-semibold text-white">{auction.asset} → {auction.targetAsset}</span>
               </div>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-gray-400">Commitment Contract:</span>
-              <div className="flex items-center space-x-2">
-                <span className="mono-address">{contracts.commitment.slice(0, 10)}...</span>
-                <span className="status-success">CREATED</span>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Selling:</span>
+                <span className="font-semibold text-zk-secondary">{auction.amount} {auction.asset}</span>
               </div>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-gray-400">ZK Verifier:</span>
-              <div className="flex items-center space-x-2">
-                <span className="mono-address">{contracts.verifier.slice(0, 10)}...</span>
-                <span className="status-success">READY</span>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Min Price:</span>
+                <span className="font-semibold text-amber-400">{auction.minPrice} {auction.targetAsset}/{auction.asset}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Max Bidders:</span>
+                <span className="font-semibold text-white">{auction.maxBidders}</span>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Auction Status */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-zk-primary flex items-center">
-            <Clock size={18} />
-            <span className="ml-2">Auction Status</span>
-          </h3>
-          <div className="card-glow-accent p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-gray-400">Status:</span>
-              <span className="status-success">🟢 LIVE</span>
+          {/* Infrastructure Status */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold text-emerald-400 flex items-center">
+              <Shield size={16} />
+              <span className="ml-1">Infrastructure ✨</span>
+            </h3>
+            <div className="space-y-1 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-gray-400">Factory:</span>
+                <div className="flex items-center space-x-1">
+                  <span className="mono-address">{contracts.factory.slice(0, 8)}...</span>
+                  <span className="status-success">DEPLOYED</span>
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-400">Commitment:</span>
+                <div className="flex items-center space-x-1">
+                  <span className="mono-address">{contracts.commitment.slice(0, 8)}...</span>
+                  <span className="status-success">CREATED</span>
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-400">Verifier:</span>
+                <div className="flex items-center space-x-1">
+                  <span className="mono-address">{contracts.verifier.slice(0, 8)}...</span>
+                  <span className="status-success">READY</span>
+                </div>
+              </div>
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Bids Received:</span>
-              <span className="font-semibold text-zk-accent">{bids.length}/{auction.maxBidders}</span>
+          </div>
+
+          {/* Auction Status */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold text-indigo-400 flex items-center">
+              <Clock size={16} />
+              <span className="ml-1">Auction Status</span>
+            </h3>
+            <div className="card-glow-accent p-3 space-y-2 text-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-gray-400">Status:</span>
+                <span className="status-success">🟢 LIVE</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Bids:</span>
+                <span className="font-semibold text-amber-400">{bids.length}/{auction.maxBidders}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Best Offer:</span>
+                <span className="font-semibold text-emerald-400">1800 USDC/WETH</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Est. Settlement:</span>
+                <span className="font-semibold gradient-text">{settlement.totalReceived} USDC</span>
+              </div>
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Best Offer:</span>
-              <span className="font-semibold text-zk-secondary">1800 USDC/WETH</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Est. Settlement:</span>
-              <span className="font-semibold gradient-text">{settlement.totalReceived} USDC</span>
-            </div>
+            <button className="sparkle-button w-full text-sm py-2">
+              ⚡ Settle Auction
+            </button>
           </div>
         </div>
 
-        <div className="pt-4">
-          <button className="sparkle-button w-full">
-            ⚡ Settle Auction
-          </button>
-        </div>
-      </div>
+        {/* MIDDLE SECTION: Live Auction */}
+        <div className="card-glow space-y-4">
+          <div className="flex items-center space-x-2 border-b border-indigo-500/20 pb-3">
+            <Target className="text-indigo-400" size={18} />
+            <h2 className="text-lg font-bold text-white">✨ Live Auction</h2>
+          </div>
 
-      {/* MIDDLE SECTION: Bidder Interface & Auction Results */}
-      <div className="card-glow p-6 space-y-6">
-        <div className="flex items-center space-x-3 border-b border-zk-primary/20 pb-4">
-          <Target className="text-zk-primary" size={24} />
-          <h2 className="text-xl font-bold sparkle-text">Live Auction</h2>
-        </div>
-
-        {/* Auction Overview */}
-        <div className="space-y-4">
-          <div className="text-center p-4 card-glow-accent">
-            <div className="text-2xl font-bold gradient-text">
+          {/* Auction Overview */}
+          <div className="text-center p-3 card-glow-accent">
+            <div className="text-xl font-bold gradient-text">
               {auction.amount} {auction.asset}
             </div>
-            <div className="text-sm text-gray-400">
+            <div className="text-xs text-gray-400">
               @ ≥{auction.minPrice} {auction.targetAsset}/{auction.asset}
             </div>
           </div>
-        </div>
 
-        {/* Winning Bids */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-zk-secondary flex items-center">
-            <TrendingUp size={18} />
-            <span className="ml-2">Winning Bids</span>
-            <span className="ml-2">✨</span>
-            <span className="ml-auto text-sm text-gray-400">(reordered by price)</span>
-          </h3>
+          {/* Winning Bids */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold text-emerald-400 flex items-center justify-between">
+              <span className="flex items-center">
+                <TrendingUp size={16} />
+                <span className="ml-1">Winning Bids ✨</span>
+              </span>
+              <span className="text-xs text-gray-400">(reordered by price)</span>
+            </h3>
+            <div className="space-y-2 max-h-40 overflow-y-auto">
+              {winningBids.map((bid) => (
+                <div key={bid.id} className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-2">
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center space-x-1">
+                      <span className="text-emerald-400 font-semibold text-sm">Bid #{bid.id}</span>
+                      <span className="text-xs">✨</span>
+                    </div>
+                    <span className="status-success text-xs">WINNING</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <span className="text-gray-400">Amount: </span>
+                      <span className="font-semibold text-white">{bid.amount} WETH</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-400">Price: </span>
+                      <span className="font-semibold text-emerald-400">{bid.price} USDC/WETH</span>
+                    </div>
+                  </div>
+                  <div className="mt-1 text-xs">
+                    <span className="text-gray-400">Bidder: </span>
+                    <span className="mono-address text-xs">{bid.bidder.slice(0, 10)}...</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Losing Bids */}
           <div className="space-y-2">
-            {winningBids.map((bid) => (
-              <div key={bid.id} className="bg-zk-secondary/10 border border-zk-secondary/30 rounded-lg p-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-zk-secondary font-semibold">Bid #{bid.id}</span>
-                    <span className="text-xs">✨</span>
+            <h3 className="text-sm font-semibold text-gray-400">Losing Bids</h3>
+            <div className="space-y-1 max-h-32 overflow-y-auto">
+              {losingBids.map((bid) => (
+                <div key={bid.id} className="bg-gray-800/50 border border-gray-600/30 rounded-lg p-2 opacity-60">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-gray-400 font-semibold text-sm">Bid #{bid.id}</span>
+                    <span className="text-xs text-red-400 bg-red-400/10 px-1 py-0.5 rounded">
+                      {bid.reason}
+                    </span>
                   </div>
-                  <span className="status-success">WINNING</span>
-                </div>
-                <div className="mt-2 grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-gray-400">Amount: </span>
-                    <span className="font-semibold">{bid.amount} WETH</span>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <span className="text-gray-500">Amount: </span>
+                      <span className="text-gray-300">{bid.amount} WETH</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Price: </span>
+                      <span className="text-gray-300">{bid.price} USDC/WETH</span>
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-gray-400">Price: </span>
-                    <span className="font-semibold text-zk-secondary">{bid.price} USDC/WETH</span>
-                  </div>
                 </div>
-                <div className="mt-2 text-xs">
-                  <span className="text-gray-400">Bidder: </span>
-                  <span className="mono-address">{bid.bidder.slice(0, 12)}...</span>
-                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* RIGHT SECTION: ZK Settlement */}
+        <div className="card-glow space-y-4">
+          <div className="flex items-center space-x-2 border-b border-indigo-500/20 pb-3">
+            <Zap className="text-amber-400" size={18} />
+            <h2 className="text-lg font-bold text-white">✨ ZK Settlement</h2>
+          </div>
+
+          {/* ZK Proof Status */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold text-amber-400">
+              ✨ ZK Proof Generation
+            </h3>
+            <div className="card-glow-accent p-3 space-y-2 text-sm">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-400">Status:</span>
+                <span className="status-success">✅ COMPLETE</span>
               </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Losing Bids */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-400 flex items-center">
-            <span>Losing Bids</span>
-          </h3>
-          <div className="space-y-2">
-            {losingBids.map((bid) => (
-              <div key={bid.id} className="bg-gray-800/50 border border-gray-600/30 rounded-lg p-3 opacity-60">
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-400 font-semibold">Bid #{bid.id}</span>
-                  <span className="text-xs text-red-400 bg-red-400/10 px-2 py-1 rounded">
-                    {bid.reason}
-                  </span>
-                </div>
-                <div className="mt-2 grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-gray-500">Amount: </span>
-                    <span>{bid.amount} WETH</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">Price: </span>
-                    <span>{bid.price} USDC/WETH</span>
-                  </div>
-                </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Time:</span>
+                <span className="font-semibold text-emerald-400">{zkProof.generationTime}s</span>
               </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* RIGHT SECTION: Settlement Dashboard */}
-      <div className="card-glow p-6 space-y-6">
-        <div className="flex items-center space-x-3 border-b border-zk-primary/20 pb-4">
-          <Zap className="text-zk-accent" size={24} />
-          <h2 className="text-xl font-bold sparkle-text">ZK Settlement</h2>
-        </div>
-
-        {/* ZK Proof Status */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-zk-accent flex items-center">
-            <span>✨</span>
-            <span className="ml-2">ZK Proof Generation</span>
-          </h3>
-          <div className="card-glow-accent p-4 space-y-3">
-            <div className="flex justify-between items-center">
-              <span className="text-gray-400">Status:</span>
-              <span className="status-success">✅ COMPLETE</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Generation Time:</span>
-              <span className="font-semibold text-zk-secondary">{zkProof.generationTime}s</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Proof Size:</span>
-              <span className="font-semibold">{zkProof.proofSize} bytes</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Circuit Constraints:</span>
-              <span className="font-semibold text-zk-primary">~{zkProof.constraints.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Hardware:</span>
-              <span className="text-sm">Dell XPS15 laptop</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Settlement Results */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-zk-secondary flex items-center">
-            <DollarSign size={18} />
-            <span className="ml-2">Settlement Results</span>
-            <span className="ml-2">✨</span>
-          </h3>
-          <div className="card-glow-accent p-4 space-y-3">
-            <div className="flex justify-between">
-              <span className="text-gray-400">Total Sold:</span>
-              <span className="font-semibold text-zk-secondary">{settlement.totalSold} WETH</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Total Received:</span>
-              <span className="font-semibold gradient-text">{settlement.totalReceived} USDC</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Winning Bidders:</span>
-              <span className="font-semibold text-zk-accent">#6, #1, #2, #3</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Gas Analysis */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-zk-primary flex items-center">
-            <span>⛽</span>
-            <span className="ml-2">Gas Analysis</span>
-          </h3>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-gray-400">ZK Verification:</span>
-              <span className="font-semibold text-zk-secondary">{zkProof.verificationGas.toLocaleString()} gas</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Total Settlement:</span>
-              <span className="font-semibold">{settlement.settlementCost.toLocaleString()} gas</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Cost @ 0.1 gwei:</span>
-              <span className="font-semibold text-zk-accent">${settlement.costUSD}</span>
-            </div>
-            <div className="text-center pt-2">
-              <div className="text-xs text-zk-accent">
-                ✨ Economically Viable for Real-World Use ✨
+              <div className="flex justify-between">
+                <span className="text-gray-400">Size:</span>
+                <span className="font-semibold text-white">{zkProof.proofSize} bytes</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Constraints:</span>
+                <span className="font-semibold text-indigo-400">~{zkProof.constraints.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Hardware:</span>
+                <span className="text-xs text-white">Dell XPS15</span>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* 1inch Integration */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-zk-gold flex items-center">
-            <span>🔗</span>
-            <span className="ml-2">1inch Integration</span>
-          </h3>
-          <div className="space-y-2 text-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-gray-400">Order Hash:</span>
-              <span className="mono-address">{settlement.orderHash.slice(0, 12)}...</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-gray-400">Extension Size:</span>
-              <span className="font-semibold">1,322 bytes</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-gray-400">Status:</span>
-              <span className="status-success">✅ SUBMITTED TO 1INCH LOP</span>
+          {/* Settlement Results */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold text-emerald-400 flex items-center">
+              <DollarSign size={16} />
+              <span className="ml-1">Settlement Results ✨</span>
+            </h3>
+            <div className="card-glow-accent p-3 space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-400">Total Sold:</span>
+                <span className="font-semibold text-emerald-400">{settlement.totalSold} WETH</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Total Received:</span>
+                <span className="font-semibold gradient-text">{settlement.totalReceived} USDC</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Winners:</span>
+                <span className="font-semibold text-amber-400">#6, #1, #2, #3</span>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="pt-4">
-          <button className="sparkle-button w-full">
-            🎉 View Transaction
-          </button>
+          {/* Gas Analysis */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold text-indigo-400 flex items-center">
+              <span>⛽ Gas Analysis</span>
+            </h3>
+            <div className="space-y-1 text-xs">
+              <div className="flex justify-between">
+                <span className="text-gray-400">ZK Verification:</span>
+                <span className="font-semibold text-emerald-400">{zkProof.verificationGas.toLocaleString()} gas</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Total Settlement:</span>
+                <span className="font-semibold text-white">{settlement.settlementCost.toLocaleString()} gas</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Cost @ 0.1 gwei:</span>
+                <span className="font-semibold text-amber-400">${settlement.costUSD}</span>
+              </div>
+              <div className="text-center pt-1">
+                <div className="text-xs text-amber-400">
+                  ✨ Economically Viable ✨
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 1inch Integration */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold text-yellow-400">
+              🔗 1inch Integration
+            </h3>
+            <div className="space-y-1 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-gray-400">Order Hash:</span>
+                <span className="mono-address text-xs">{settlement.orderHash.slice(0, 10)}...</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-400">Extension:</span>
+                <span className="font-semibold text-white">1,322 bytes</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-400">Status:</span>
+                <span className="status-success">✅ SUBMITTED</span>
+              </div>
+            </div>
+            <button className="sparkle-button w-full text-sm py-2">
+              🎉 View Transaction
+            </button>
+          </div>
         </div>
       </div>
     </div>

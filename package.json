@@ -8,6 +8,8 @@
     "compile": "hardhat compile",
     "test": "npx hardhat test",
     "demo": "node demo-showcase.js",
+    "demo:gas": "node gas-analysis-detailed.js",
+    "demo:cleanup": "node cleanup-demo.js",
     "deploy": "hardhat run scripts/deploy.js",
     "deploy:polygon": "hardhat run scripts/deploy.js --network polygon",
     "deploy:arbitrum": "hardhat run scripts/deploy.js --network arbitrum",

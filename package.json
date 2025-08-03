@@ -6,8 +6,8 @@
   "type": "commonjs",
   "scripts": {
     "compile": "hardhat compile",
-    "test": "hardhat test",
-    "demo": "node demo.js",
+    "test": "npx hardhat test",
+    "demo": "node demo-showcase.js",
     "deploy": "hardhat run scripts/deploy.js",
     "deploy:polygon": "hardhat run scripts/deploy.js --network polygon",
     "deploy:arbitrum": "hardhat run scripts/deploy.js --network arbitrum",

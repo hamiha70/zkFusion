@@ -476,8 +476,8 @@ describe("🚨 CRITICAL: True 1inch LOP Integration Test", function () {
     function buildOrderData(chainId, verifyingContract, order) {
       return {
         domain: { 
-          name: '1inch Aggregation Router', 
-          version: '6', 
+          name: '1inch Limit Order Protocol', // Original test suite value
+          version: '4',                       // Original test suite value
           chainId, 
           verifyingContract 
         },
